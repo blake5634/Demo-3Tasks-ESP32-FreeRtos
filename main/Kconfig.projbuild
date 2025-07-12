@@ -54,7 +54,7 @@ menu "BH_demo Configuration2"
             Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
 
     config BLINK_PERIOD
-        int "Blink period in ms"
+        int "LED Blink Task period in ms"
         range 10 3600000
         default 1000
         help

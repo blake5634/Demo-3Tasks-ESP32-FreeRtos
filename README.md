@@ -7,10 +7,11 @@ We also wish to protect the i2c driver with a mutex.
 
 This should be able to run on any ESP32 supported by IDF.  The LCD display is
 the popular 16x2 display with i2c ``Backpack''.   Our ESP32 board is Waveshare's ESP32c6 Zero.
-Lots of info on and an IDF project for
-connecting the display is [[HERE].](https://github.com/blake5634/esp32_IDF_i2c_16x2_LCD).
+Lots of info on
+connecting the display is [[HERE]](https://github.com/blake5634/esp32_IDF_i2c_16x2_LCD)
+(with a working IDF project).
 
-Learning goals of this demo include
+**Learning goals of this demo include**
 
 - How to set up tasks in FreeRTOS to run using it's non-preemptive scheduler.
 
@@ -20,14 +21,15 @@ Learning goals of this demo include
 use it at a time.
 
 
-The three tasks   are:
-
 **Tasks**
+
+
+The three tasks   are:
 
 1. Blink the on-board LED at a constant rate. Support different ESP32 boards in terms of an LED hooked to a GPIO *OR*
 using the LED_strip approach (such as RGB LEDs).
 
-2. Increment a counter displayed on a 16x2 LCD connected via i2c.
+2. Increment a counter displayed on a 16x2 LCD connected via i2c (but the hardware is optional).
 
 3.  Print "Hello World" periodically on the IDF "monitor" console.
 
@@ -41,7 +43,7 @@ These simple tasks are orchestrated by appropriate FreeRTOS structure and API ca
                 //
                 // do some work
                 //
-                vtaskDelay(PERIOD)
+                vTaskDelay(DELAY_MS/portTICK_PERIOD_MS);
                 }
             }
 
@@ -54,32 +56,34 @@ In this code, the hello_task (main.c line 190) is the cleanest example of this s
 
 - The custom configuration menu is defined in the file `Kconfig.projbuild` ([[GUIDE]](https://medium.com/@bhautik.markeye/esp-idf-configuration-how-to-add-custom-configuration-in-project-config-728f81b8d0d8) to customizing the configuration menu.)
 
-- Options must be / can be configured using IDF's menu system.   To invoke the configuration menu,
+- Options   can be configured using IDF's menu system.   To invoke the configuration menu,
 
-    > >get-idf
-    > >idf.py menuconfig
+    > `>get-idf`
 
-    Choose option  `BH_Demo_Configuration2`
+    > `>idf.py menuconfig`
 
-    - Specifically
+    In the character-based menu system, choose the option  `BH_Demo_Configuration2`
+
+    - You can then set:
 
         - Which type of LED does the board have, LED-via GPIO, or LED-via the ``LED_strip'' protocol.
 
         - For LED_strip, there are two protocols and our hardware (ESP32C6-zero from Waveshare) needs
         to be set to  'backend peripheral "RMT"' (the option for some other boards is "SPI")
 
-        - The cycle time delay for the XXXXXXXXXXx task can be set
+        - The task cycle  delay (`BLINK_PERIOD` in ms.) for the `LED_task()`  can be set
 
-        - GPIO pin for the LED can be set (8 in our board)
+        - GPIO pin (8 in our board) for the built-in  LED can be set
 
         - You might not have an i2c 16x2 LCD module connected.   You can turn the LCD module "off" in menuconfig
         and the code will change the LCD task to only simulate the device with log messages.   This way
-        you can test this code with a bare board.
+        you can test this code with a bare board.  Select `Use 2x16 LCD via i2c backpack (YES/NO) `
 
 
 **Resource mutual exclusion**
 
-A Mutex Semaphore is a FreeRTOS implementation which can be used by cooperating tasks to ``check out'' the i2c
+A [Mutex](https://en.wikipedia.org/wiki/Lock_(computer_science))
+Semaphore is a FreeRTOS implementation which can be used by cooperating tasks to ``check out'' the i2c
 interface driver so that only one task attempts to do i2c transactions at a time.  The LCD_16x2_task()
 (see file LCD_task.c) uses
 the Mutex as follows:
