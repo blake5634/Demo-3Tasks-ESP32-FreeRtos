@@ -1,0 +1,2 @@
+source C:/Users/Frankie/esp/BlakeI2C/Demo-3Tasks-ESP32-FreeRtos/build/bootloader/gdbinit/symbols
+source C:/Users/Frankie/esp/BlakeI2C/Demo-3Tasks-ESP32-FreeRtos/build/bootloader/gdbinit/connect
