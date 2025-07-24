@@ -246,8 +246,10 @@ void app_main(void)
     xTaskCreatePinnedToCore(LED_task, "LED Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "LED task created");
 
-    uint8_t lcd_address = 0x27;
-    xTaskCreatePinnedToCore(LCD_task, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address, TASK_PRIO_2, NULL, tskNO_AFFINITY);
-    ESP_LOGI(TAG, "LCD task created");
+    uint8_t lcd_address1 = SLAVE_ADDRESS1_LCD;
+    uint8_t lcd_address2 = SLAVE_ADDRESS2_LCD;
+    xTaskCreatePinnedToCore(LCD_task, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address1, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(LCD_task, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+    ESP_LOGI(TAG, "LCD tasks created");
 
 }

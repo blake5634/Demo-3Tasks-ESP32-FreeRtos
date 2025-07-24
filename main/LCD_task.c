@@ -38,18 +38,54 @@ void LCD_task(void*);
 #ifdef  CONFIG_DRIVE_LCD_YES
 
 void LCD_task(void *lcd_addr) {
+    int i=0;   // iteration counter
+    char numst[20];  // place to hold string to print
+    uint8_t hasInit = 0;
     int lcd = (uint32_t)lcd_addr;
-    lcd_init(lcd);             // Initialize the LCD
-    usleep(d100ms);
-
-    lcd_clear(lcd);            // Clear the LCD screen
-    usleep(d100ms);
     while (1) {
-        if (xSemaphoreTake(i2cMutex, portMAX_DELAY) == pdTRUE) {
-            printf("LCD address is: 0x%x\n", lcd);
+        
+        if (hasInit == 0 && xSemaphoreTake(i2cMutex, portMAX_DELAY) == pdTRUE) {
+            
+
+            printf("Starting: 0x%x\n", lcd);
+            
+            lcd_init(lcd);             // Initialize the LCD
+            usleep(d100ms);
+
+            lcd_clear(lcd);            // Clear the LCD screen
+            usleep(d100ms);
+
+            lcd_put_cursor(lcd, 0, 0);   // Set cursor position to   row, column
+            usleep(d100ms);
+            char buffer[20];
+            sprintf(buffer, "Works: 0x%x\n", lcd);
+            lcd_send_string(lcd, buffer);
+            xSemaphoreGive(i2cMutex);
+            usleep(d100ms);
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            hasInit = 1;
+        }
+
+        if (hasInit == 1 && xSemaphoreTake(i2cMutex, portMAX_DELAY) == pdTRUE) {
+            /* We were able to obtain the semaphore and can now access the
+//                 shared resource. */
+            lcd_put_cursor(lcd, 1, 0);
+
+            if(lcd == 0x27){
+                sprintf(numst, "N: %04d",i++);
+            } else {
+                i = i + 2;
+                sprintf(numst, "N: %04d",i);
+            }
+
+            lcd_send_string(lcd, numst);     // Display the count (numst)
+            //usleep(3*d100ms);
+
+            /* We have finished accessing the shared resource. Release the
+            semaphore. */
+            xSemaphoreGive(i2cMutex);
             vTaskDelay(pdMS_TO_TICKS(1000));
         }
-        xSemaphoreGive(i2cMutex);
     }
     // lcd_init();             // Initialize the LCD
     // usleep(d100ms);
