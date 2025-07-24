@@ -71,12 +71,8 @@ void LCD_task(void *lcd_addr) {
 //                 shared resource. */
             lcd_put_cursor(lcd, 1, 0);
 
-            if(lcd == 0x27){
-                sprintf(numst, "N: %04d",i++);
-            } else {
-                i = i + 2;
-                sprintf(numst, "N: %04d",i);
-            }
+            i = i + lcd;
+            sprintf(numst, "N: %04d", i);
 
             lcd_send_string(lcd, numst);     // Display the count (numst)
             //usleep(3*d100ms);

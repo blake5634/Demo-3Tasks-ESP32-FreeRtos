@@ -1,7 +1,7 @@
 {
     "version":            "1.2",
     "project_name":       "BH_demo_esp32c6",
-    "project_version":    "2fb9595-dirty",
+    "project_version":    "f898647-dirty",
     "project_path":       "C:/Users/Frankie/esp/BlakeI2C/Demo-3Tasks-ESP32-FreeRtos",
     "idf_path":           "C:/Espressif/frameworks/esp-idf-v5.4.1",
     "build_dir":          "C:/Users/Frankie/esp/BlakeI2C/Demo-3Tasks-ESP32-FreeRtos/build",
