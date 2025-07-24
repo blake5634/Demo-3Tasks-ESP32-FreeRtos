@@ -48,6 +48,9 @@ int comp_lock_entry_func(int argc, char **argv);
 int comp_task_notification_entry_func(int argc, char **argv);
 int comp_batch_proc_example_entry_func(int argc, char **argv);
 
+#define SLAVE_ADDRESS1_LCD 0x27
+#define SLAVE_ADDRESS2_LCD 0x26
+
 
 /////////// BH
 // Local function protos:
@@ -55,13 +58,13 @@ int comp_batch_proc_example_entry_func(int argc, char **argv);
 //FREE-RTOS tasks:
 static void LED_task(void*);
 static void hello_task(void *arg);
-void LCD_16x2_task(void*);
+// void LCD_16x2_task(void*);
 void LCD_task(void *lcd_addr);
 
 //  local functions:
 static void configure_led(void);
 static void setLedFromState(void);
-void LCD_16x2_init(void) ;
+// void LCD_16x2_init(void) ;
 void handle_error(char* );
 
 #define TAG  "BH_Demo-3Tasks"
@@ -208,33 +211,8 @@ void app_main(void)
     ESP_LOGI(TAG, "mutex created");
     i2c_master_init();  // now separate from lcd_init()
     ESP_LOGI(TAG, "i2c master is inited");
-    // initialize the LCD device via serial backpack
-    // LCD_16x2_init();
     ESP_LOGI(TAG, "LCD device init ");
 
-    // if (i2cMutex != NULL){
-    //     if( xSemaphoreTake( i2cMutex, ( TickType_t ) 10 ) == pdTRUE )
-    //     {
-    //         /* We were able to obtain the semaphore and can now access the
-    //            shared resource. */
-
-    //         //   Configure LCD display via i2c
-    //         ESP_LOGI(TAG, "%s", lcd_LOG_message );
-    //         // ESP_LOGI(TAG, "got here..." );
-    //         LCD_16x2_init();
-    //         ESP_LOGI(TAG, " LCD display is set up" );
-
-    //         /* We have finished accessing the shared resource. Release the
-    //            semaphore. */
-    //         xSemaphoreGive( i2cMutex );
-    //     }
-    //     else handle_error("lcd_init Mutex Timeout");
-    // }
-    // else handle_error("i2c Mutex FAIL");
-
-
-
-    //  Configure the LED GPIO
     configure_led();   // defined above for two configs
     ESP_LOGI(TAG, " LED has been configured.");
 
