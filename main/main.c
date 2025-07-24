@@ -56,6 +56,7 @@ int comp_batch_proc_example_entry_func(int argc, char **argv);
 static void LED_task(void*);
 static void hello_task(void *arg);
 void LCD_16x2_task(void*);
+void LCD_task(void *lcd_addr);
 
 //  local functions:
 static void configure_led(void);
@@ -85,6 +86,7 @@ extern char lcd_LOG_message[];
 
 // blinker state
 static uint8_t s_led_state = 0;
+
 
 // i2c mutex:  this is used to make sure only one task can transact on i2c at a time.
 SemaphoreHandle_t i2cMutex = NULL;
@@ -207,28 +209,28 @@ void app_main(void)
     i2c_master_init();  // now separate from lcd_init()
     ESP_LOGI(TAG, "i2c master is inited");
     // initialize the LCD device via serial backpack
-    LCD_16x2_init();
+    // LCD_16x2_init();
     ESP_LOGI(TAG, "LCD device init ");
 
-    if (i2cMutex != NULL){
-        if( xSemaphoreTake( i2cMutex, ( TickType_t ) 10 ) == pdTRUE )
-        {
-            /* We were able to obtain the semaphore and can now access the
-               shared resource. */
+    // if (i2cMutex != NULL){
+    //     if( xSemaphoreTake( i2cMutex, ( TickType_t ) 10 ) == pdTRUE )
+    //     {
+    //         /* We were able to obtain the semaphore and can now access the
+    //            shared resource. */
 
-            //   Configure LCD display via i2c
-            ESP_LOGI(TAG, "%s", lcd_LOG_message );
-            // ESP_LOGI(TAG, "got here..." );
-            LCD_16x2_init();
-            ESP_LOGI(TAG, " LCD display is set up" );
+    //         //   Configure LCD display via i2c
+    //         ESP_LOGI(TAG, "%s", lcd_LOG_message );
+    //         // ESP_LOGI(TAG, "got here..." );
+    //         LCD_16x2_init();
+    //         ESP_LOGI(TAG, " LCD display is set up" );
 
-            /* We have finished accessing the shared resource. Release the
-               semaphore. */
-            xSemaphoreGive( i2cMutex );
-        }
-        else handle_error("lcd_init Mutex Timeout");
-    }
-    else handle_error("i2c Mutex FAIL");
+    //         /* We have finished accessing the shared resource. Release the
+    //            semaphore. */
+    //         xSemaphoreGive( i2cMutex );
+    //     }
+    //     else handle_error("lcd_init Mutex Timeout");
+    // }
+    // else handle_error("i2c Mutex FAIL");
 
 
 
@@ -244,7 +246,8 @@ void app_main(void)
     xTaskCreatePinnedToCore(LED_task, "LED Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "LED task created");
 
-    xTaskCreatePinnedToCore(LCD_16x2_task, "LCD 16x2 Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+    uint8_t lcd_address = 0x27;
+    xTaskCreatePinnedToCore(LCD_task, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address, TASK_PRIO_2, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "LCD task created");
 
 }

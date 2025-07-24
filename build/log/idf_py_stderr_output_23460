@@ -1,0 +1,2 @@
+warning: the default selection NO_LCD (undefined) of <choice DRIVE_LCD_16x2> (defined at C:/Users/Frankie/esp/BlakeI2C/Demo-3Tasks-ESP32-FreeRtos/main/Kconfig.projbuild:5) is not contained in the choice
+warning: the default selection LCD (undefined) of <choice DRIVE_LCD_16x2> (defined at C:/Users/Frankie/esp/BlakeI2C/Demo-3Tasks-ESP32-FreeRtos/main/Kconfig.projbuild:5) is not contained in the choice
