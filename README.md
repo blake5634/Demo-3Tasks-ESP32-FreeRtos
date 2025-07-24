@@ -100,3 +100,27 @@ if( xSemaphoreTake( i2cMutex, ( TickType_t ) 10 ) == pdTRUE ) {
 xSemaphoreGive( i2cMutex );
 ```
 
+**2LCDs Implementation**
+
+Documentation of implementing two devices (LCDs) onto single I2C connection using FreeRTOS to organize commands.
+
+Initially, methods did not intake different addresses:
+
+    -I resoldered my LCD connection to change address (Look up A0, A1 pads for 8574 backpack). This way, commands can be differentiated between two LCDs.
+
+    -Implemented LCD address parameter in relevant methods. Now commands can be sent to specific addresses.
+
+    -combined LCD_init with LCD_task. Implementation is determined by hasInit flag. (perhaps a bad implementation, will come back for better solution).
+
+After, you need to create 2 tasks:
+
+    -You can pin 2 tasks to a CPU, and can pass arguments if casted as a void*.
+    
+    -You can run the same task, each with different addressses. If properly Semaphored, will run in parrallel and seperately.
+
+Things to look for in the future:
+
+    -I did not play with timings, honestly got really lucky I did not have to. With more devices, may need shorter breaks/takeMutex buffers.
+
+    -Reading and writing: reading devices and writing to each other ("waiting on sensors")
+
