@@ -4,8 +4,7 @@ menu "BH_demo Configuration2"
 
     choice DRIVE_LCD_16x2
         prompt "Use 2x16 LCD via i2c backpack"
-        default NO_LCD
-        default LCD
+        default DRIVE_LCD_YES
         help
             Do you have an LCD via i2c?
         config DRIVE_LCD_NO
@@ -17,7 +16,7 @@ menu "BH_demo Configuration2"
 
     choice BLINK_LED
         prompt "Blink LED type"
-        default BLINK_LED_GPIO
+        default BLINK_LED_STRIP
         help
             Select the LED type. A normal level controlled LED or an addressable LED strip.
             The default selection is based on the Espressif DevKit boards.

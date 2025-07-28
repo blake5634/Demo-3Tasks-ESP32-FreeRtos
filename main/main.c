@@ -59,7 +59,9 @@ int comp_batch_proc_example_entry_func(int argc, char **argv);
 static void LED_task(void*);
 static void hello_task(void *arg);
 // void LCD_16x2_task(void*);
-void LCD_task(void *lcd_addr);
+void LCD_reset(int);
+void LCD_task1(void *lcd_addr);
+void LCD_task2(void *lcd_addr);
 
 //  local functions:
 static void configure_led(void);
@@ -211,6 +213,10 @@ void app_main(void)
     ESP_LOGI(TAG, "mutex created");
     i2c_master_init();  // now separate from lcd_init()
     ESP_LOGI(TAG, "i2c master is inited");
+    
+    LCD_reset(SLAVE_ADDRESS1_LCD);
+    LCD_reset(SLAVE_ADDRESS2_LCD);
+
     ESP_LOGI(TAG, "LCD device init ");
 
     configure_led();   // defined above for two configs
@@ -226,8 +232,7 @@ void app_main(void)
 
     uint8_t lcd_address1 = SLAVE_ADDRESS1_LCD;
     uint8_t lcd_address2 = SLAVE_ADDRESS2_LCD;
-    xTaskCreatePinnedToCore(LCD_task, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address1, TASK_PRIO_2, NULL, tskNO_AFFINITY);
-    xTaskCreatePinnedToCore(LCD_task, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(LCD_task1, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address1, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(LCD_task2, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "LCD tasks created");
-
 }
