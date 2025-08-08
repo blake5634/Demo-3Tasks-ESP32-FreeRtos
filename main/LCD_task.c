@@ -92,13 +92,18 @@ void LCD_task2(void *lcd_addr) {
     
     sprintf(buffer, "LCD 0x%x works!", lcd);
 
+    uint8_t flip = 0;
+
     while (1) {
-        if (xSemaphoreTake(i2cMutex, portMAX_DELAY) == pdTRUE) {
-            lcd_put_cursor(lcd, 0, 0);   // Set cursor position to   row, column
+        if(xSemaphoreTake(i2cMutex, portMAX_DELAY) == pdTRUE) {
+            lcd_clear(lcd);
+            lcd_put_cursor(lcd, flip, 0);
+            
             lcd_send_string(lcd, buffer);
-            xSemaphoreGive(i2cMutex);
-            vTaskDelay(pdMS_TO_TICKS(1000));        
         }
+        xSemaphoreGive(i2cMutex);
+        flip = flip ^ 1;
+        vTaskDelay(pdMS_TO_TICKS(1000)); 
     }
 }
 
