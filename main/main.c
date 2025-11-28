@@ -27,11 +27,10 @@
 //  Blake's demo of multiple FreeRTOS tasks
 //            (Jul 25)
 //
+//     Adapted to drive the TPT-Finder photonics LED/Photodiode board
+//            (Nov 25)
+//
 
-
-// #include "basic_freertos_smp_usage.h"
-
-// #pragma once
 
 /*------------------------------------------------------------*/
 /* Macros */
@@ -52,30 +51,37 @@ int comp_batch_proc_example_entry_func(int argc, char **argv);
 #define SLAVE_ADDRESS2_LCD 0x26
 
 
-/////////// BH
-// Local function protos:
 
-//FREE-RTOS tasks:
-static void LED_task(void*);
-static void hello_task(void *arg);
-// void LCD_16x2_task(void*);
+// LCD Driver related tasks
+// void LCD_16x2_task(void*);  // as  modified by Frankie for multiple LCDs
 void LCD_reset(int);
-void LCD_task1(void *lcd_addr);
-void LCD_task2(void *lcd_addr);
-
-//  local functions:
 static void configure_led(void);
 static void setLedFromState(void);
-// void LCD_16x2_init(void) ;
+
+
+
+
+/////////// BH
+// Local function prototypes:
+
+//FREE-RTOS tasks:
+// blinker state
+static uint8_t s_led_state = 0;
+static void LED_task(void*);
+static void hello_task(void *arg);
+void LCD_task1(void *lcd_addr);
+// void LCD_task2(void *lcd_addr);  // we're only using one in TPT-finder
+
+
+
 void handle_error(char* );
 
-#define TAG  "BH_Demo-3Tasks"
+#define TAG  "TPT-Photonics"
 
 //   BH defines
 #define DEFAULT_STACK  4096
 #define BLINK_PERIOD    300 //ms
 #define BLINK_GPIO 8
-
 
 
 
@@ -87,10 +93,12 @@ void handle_error(char* msg){
     }
 }
 
+
+
+
+
 extern char lcd_LOG_message[];
 
-// blinker state
-static uint8_t s_led_state = 0;
 
 
 // i2c mutex:  this is used to make sure only one task can transact on i2c at a time.
@@ -120,6 +128,8 @@ static void LED_task(void*)
  *        we should configure:   Blink LED type:  "LED strip"
  *        and
  *                               LED strip backend peripheral "RMT"
+ *
+ *   TODO:  move this to a separate .c file for LED hardware setup.
  */
 
 #ifdef CONFIG_BLINK_LED_STRIP
@@ -190,7 +200,7 @@ static void configure_led(void)
 /*
  *
  *    End of "blink code block"
- */
+ ***************************************************************/
 
 
 static void hello_task(void *arg)
@@ -208,19 +218,28 @@ static void hello_task(void *arg)
 
 void app_main(void)
 {
+    /*
+     * Hardware and Software setups and inits
+     */
+
     //   Set up i2c for all tasks
     i2cMutex = xSemaphoreCreateMutex();
     ESP_LOGI(TAG, "mutex created");
     i2c_master_init();  // now separate from lcd_init()
     ESP_LOGI(TAG, "i2c master is inited");
     
+    // initialize LCD hardware
     LCD_reset(SLAVE_ADDRESS1_LCD);
-    LCD_reset(SLAVE_ADDRESS2_LCD);
+    // LCD_reset(SLAVE_ADDRESS2_LCD);
+    ESP_LOGI(TAG, "LCD device init completed ");
 
-    ESP_LOGI(TAG, "LCD device init ");
-
+    // config hardware GPIO pins for on-board LED (board-specific)
     configure_led();   // defined above for two configs
-    ESP_LOGI(TAG, " LED has been configured.");
+    ESP_LOGI(TAG, "on-board LED hardware has been configured.");
+
+    /*
+     * Start up the Free-RTOS Tasks
+     */
 
     ESP_LOGI(TAG, "\n\n      Starting task(s)...\n\n");
 
@@ -231,8 +250,8 @@ void app_main(void)
     ESP_LOGI(TAG, "LED task created");
 
     uint8_t lcd_address1 = SLAVE_ADDRESS1_LCD;
-    uint8_t lcd_address2 = SLAVE_ADDRESS2_LCD;
+    // uint8_t lcd_address2 = SLAVE_ADDRESS2_LCD;
     xTaskCreatePinnedToCore(LCD_task1, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address1, TASK_PRIO_2, NULL, tskNO_AFFINITY);
-    xTaskCreatePinnedToCore(LCD_task2, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);
-    ESP_LOGI(TAG, "LCD tasks created");
+    // xTaskCreatePinnedToCore(LCD_task2, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+    ESP_LOGI(TAG, "LCD task(s) created");
 }
