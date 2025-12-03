@@ -28,7 +28,7 @@
 //            (Jul 25)
 //
 //     Adapted to drive the TPT-Finder photonics LED/Photodiode board
-//            (Nov 25)
+//            (Nov/Dec 25)
 //
 
 
@@ -208,7 +208,7 @@ static void hello_task(void *arg)
 
     int i=0;
     while(1) {
-        vTaskDelay(1000/portTICK_PERIOD_MS);
+        vTaskDelay(2000/portTICK_PERIOD_MS);
         printf("\n\n\n");
         i++;
         printf("Hello world! (task rep: %d) \n", i);
@@ -237,21 +237,47 @@ void app_main(void)
     configure_led();   // defined above for two configs
     ESP_LOGI(TAG, "on-board LED hardware has been configured.");
 
-    /*
+    // setup for photonics board interface.
+    init_photonics();
+    ESP_LOGI(TAG, "photonics pinouts have been set");
+
+
+
+    /***********************************************************************
+     *
      * Start up the Free-RTOS Tasks
      */
 
     ESP_LOGI(TAG, "\n\n      Starting task(s)...\n\n");
 
+    /*
+     *   HELLO WORLD on serial console
+     */
     xTaskCreatePinnedToCore(hello_task, "Hello World Task", DEFAULT_STACK, NULL, TASK_PRIO_3, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "Hello world (serial) task created");
 
+    /*
+     * Flash the onboard LED
+     */
     xTaskCreatePinnedToCore(LED_task, "LED Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "LED task created");
 
+    /*
+     *  Display messages on the LCD
+     */
     uint8_t lcd_address1 = SLAVE_ADDRESS1_LCD;
     // uint8_t lcd_address2 = SLAVE_ADDRESS2_LCD;
     xTaskCreatePinnedToCore(LCD_task1, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address1, TASK_PRIO_2, NULL, tskNO_AFFINITY);
     // xTaskCreatePinnedToCore(LCD_task2, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "LCD task(s) created");
+
+
+    /*
+     *
+     *    Generate 100Hz cycle and coordinate OFF time  ON time and
+     *      ADC readings
+     */
+    xTaskCreatePinnedToCore(photonic_task, "Photonics Task", DEFAULT_STACK, NULL, TASK_PRIO_3, NULL, tskNO_AFFINITY);
+    ESP_LOGI(TAG, "Photonics task created");
+
 }
