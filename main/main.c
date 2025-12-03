@@ -60,8 +60,8 @@ void LCD_16x2_task(void*);
 //  local functions:
 static void configure_led(void);
 static void setLedFromState(void);
-void LCD_16x2_init(void) ;
-void handle_error(char* );
+//void LCD_16x2_init() ;
+//void handle_error(char* );
 
 #define TAG  "BH_Demo-3Tasks"
 
@@ -81,7 +81,6 @@ void handle_error(char* msg){
     }
 }
 
-extern char lcd_LOG_message[];
 
 // blinker state
 static uint8_t s_led_state = 0;
@@ -200,30 +199,32 @@ static void hello_task(void *arg)
 }
 
 void app_main(void)
-{
+{   vTaskDelay(pdMS_TO_TICKS(1500));
+    ESP_LOGI(TAG," got started here");
     //   Set up i2c for all tasks
     i2cMutex = xSemaphoreCreateMutex();
     ESP_LOGI(TAG, "mutex created");
     i2c_master_init();  // now separate from lcd_init()
     ESP_LOGI(TAG, "i2c master is inited");
     // initialize the LCD device via serial backpack
-    LCD_16x2_init();
-    ESP_LOGI(TAG, "LCD device init ");
+    //LCD_16x2_init();
+    //ESP_LOGI(TAG, "LCD device init ");
+
 
     if (i2cMutex != NULL){
         if( xSemaphoreTake( i2cMutex, ( TickType_t ) 10 ) == pdTRUE )
         {
-            /* We were able to obtain the semaphore and can now access the
-               shared resource. */
+            // We were able to obtain the semaphore and can now access the
+            //   shared resource.
 
             //   Configure LCD display via i2c
-            ESP_LOGI(TAG, "%s", lcd_LOG_message );
+            ESP_LOGI(TAG, "Beginning LCD Init" );
             // ESP_LOGI(TAG, "got here..." );
             LCD_16x2_init();
             ESP_LOGI(TAG, " LCD display is set up" );
 
-            /* We have finished accessing the shared resource. Release the
-               semaphore. */
+            //We have finished accessing the shared resource. Release the
+            //   semaphore.
             xSemaphoreGive( i2cMutex );
         }
         else handle_error("lcd_init Mutex Timeout");
@@ -236,15 +237,26 @@ void app_main(void)
     configure_led();   // defined above for two configs
     ESP_LOGI(TAG, " LED has been configured.");
 
+
+
     ESP_LOGI(TAG, "\n\n      Starting task(s)...\n\n");
 
     xTaskCreatePinnedToCore(hello_task, "Hello World Task", DEFAULT_STACK, NULL, TASK_PRIO_3, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "Hello world (serial) task created");
+
+
 
     xTaskCreatePinnedToCore(LED_task, "LED Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "LED task created");
 
     xTaskCreatePinnedToCore(LCD_16x2_task, "LCD 16x2 Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "LCD task created");
+
+
+    int i=5;
+    while(i>0){
+        ESP_LOGI(TAG, ".");
+        vTaskDelay(pdMS_TO_TICKS(3000));
+    }
 
 }

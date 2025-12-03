@@ -20,9 +20,6 @@
 extern SemaphoreHandle_t i2cMutex;
 extern void handle_error(char* msg);
 
-void LCD_16x2_task(void*);
-void LCD_16x2_init(void) ;
-
 /*************************   LCD code
  *
  *
@@ -39,7 +36,7 @@ void LCD_16x2_init(void) ;
 
 char lcd_LOG_message[] = "CONFIG:DRIVE_LCD:  YES_LCD, We will be using LCD via i2c";
 
-void LCD_16x2_init(void) {
+void LCD_16x2_init()) {
     lcd_init();             // Initialize the LCD
     usleep(d100ms);
 
@@ -56,6 +53,7 @@ void LCD_16x2_task(void*){
     int i=0;   // iteration counter
     char numst[20];  // place to hold string to print
     while (1){
+        ESPLOGI(TAG,"  LCD TASK IS ACTIVE");
         if (i2cMutex != NULL){
             if( xSemaphoreTake( i2cMutex, ( TickType_t ) 10 ) == pdTRUE )
             {
@@ -77,7 +75,7 @@ void LCD_16x2_task(void*){
         else handle_error("i2c Mutex FAIL");
 
         ESP_LOGI(TAG, "LCD update sent");
-        vTaskDelay(300/portTICK_PERIOD_MS);
+        vTaskDelay(1000/portTICK_PERIOD_MS);
         }
 
 
@@ -96,7 +94,7 @@ void LCD_16x2_task(void*){
 }
 
 
-void LCD_16x2_init(void) {
+void LCD_16x2_init() {
     ESP_LOGI(TAG, "placeholder: LCD_16x2_init()");
 }
 #else

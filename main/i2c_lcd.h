@@ -9,7 +9,7 @@
 #define SLAVE_ADDRESS_LCD 0x3f
 
 // GPIO number used for I2C master clock
-#define I2C_MASTER_SCL_IO           GPIO_NUM_3
+#define I2C_MASTER_SCL_IO           GPIO_NUM_4
 
 // GPIO number used for I2C master data
 #define I2C_MASTER_SDA_IO           GPIO_NUM_5
@@ -50,6 +50,11 @@
  *   parameters so we can abstract it for multiple devices.
  */
 esp_err_t i2c_master_init(void);
+
+
+void LCD_16x2_task(void*) ;
+void LCD_16x2_init() ;
+
 
 /**
  * @brief Initializes the LCD
