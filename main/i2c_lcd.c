@@ -11,7 +11,7 @@
  *
  */
 
-esp_err_t err; // Variable to store I2C communication errors
+esp_err_t lcd_error; // Variable to store I2C communication errors
 static const char *TAG = "LCD"; // Tag for logging
 
 static int i2cMasterinit = 0;  // flag to show i2c is setup
@@ -52,10 +52,10 @@ void lcd_send_cmd(char cmd)
     data_t[3] = data_l | 0x08; // Enable (EN) = 0, Register Select (RS) = 0
     
     // Write data to the I2C device
-    err = i2c_master_write_to_device(I2C_NUM, SLAVE_ADDRESS_LCD, data_t, 4, 1000);
+    lcd_error = i2c_master_write_to_device(I2C_NUM, SLAVE_ADDRESS_LCD, data_t, 4, 1000);
     
     // Log an error message if there is an error in sending the command
-    if (err != 0) ESP_LOGI(TAG, "Error in sending command");
+    if (lcd_error != 0) ESP_LOGI(TAG, "Error in sending command");
 }
 
 void lcd_send_data(char data)
@@ -72,10 +72,10 @@ void lcd_send_data(char data)
     data_t[3] = data_l | 0x09; // Enable (EN) = 0, Register Select (RS) = 1
     
     // Write data to the I2C device
-    err = i2c_master_write_to_device(I2C_NUM, SLAVE_ADDRESS_LCD, data_t, 4, 1000);
+    lcd_error = i2c_master_write_to_device(I2C_NUM, SLAVE_ADDRESS_LCD, data_t, 4, 1000);
     
     // Log an error message if there is an error in sending the data
-    if (err != 0) ESP_LOGI(TAG, "Error in sending data");
+    if (lcd_error != 0) ESP_LOGI(TAG, "Error in sending data");
 }
 
 void lcd_clear(void)

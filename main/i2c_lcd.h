@@ -6,7 +6,8 @@
 #include "unistd.h"
 
 // I2C address of the LCD (change according to your setup)
-#define SLAVE_ADDRESS_LCD 0x3f
+// #define SLAVE_ADDRESS_LCD 0x3f
+#define SLAVE_ADDRESS_LCD 0x27
 
 // GPIO number used for I2C master clock
 #define I2C_MASTER_SCL_IO           GPIO_NUM_4
@@ -53,7 +54,7 @@ esp_err_t i2c_master_init(void);
 
 
 void LCD_16x2_task(void*) ;
-void LCD_16x2_init() ;
+esp_err_t LCD_16x2_init(void) ;
 
 
 /**

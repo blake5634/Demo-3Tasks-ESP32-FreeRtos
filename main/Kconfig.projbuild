@@ -4,8 +4,8 @@ menu "BH_demo Configuration2"
 
     choice DRIVE_LCD_16x2
         prompt "Use 2x16 LCD via i2c backpack"
-        default NO_LCD
-        default LCD
+        default DRIVE_LCD_NO
+        default DRIVE_LCD_YES
         help
             Do you have an LCD via i2c?
         config DRIVE_LCD_NO

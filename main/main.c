@@ -49,13 +49,17 @@ int comp_task_notification_entry_func(int argc, char **argv);
 int comp_batch_proc_example_entry_func(int argc, char **argv);
 
 
+esp_err_t err; // Variable to store errors errors
+
+
 /////////// BH
 // Local function protos:
 
 //FREE-RTOS tasks:
 static void LED_task(void*);
-static void hello_task(void *arg);
-void LCD_16x2_task(void*);
+// following now in i2c_lcd.h
+//static void hello_task(void *arg);
+//void LCD_16x2_task(void*);
 
 //  local functions:
 static void configure_led(void);
@@ -220,7 +224,10 @@ void app_main(void)
             //   Configure LCD display via i2c
             ESP_LOGI(TAG, "Beginning LCD Init" );
             // ESP_LOGI(TAG, "got here..." );
-            LCD_16x2_init();
+            err = LCD_16x2_init();
+            if (err == 0) ESP_LOGI(TAG, "LCD is initialized");
+            if (err == 1) ESP_LOGI(TAG, "LCD not configured to run");
+
             ESP_LOGI(TAG, " LCD display is set up" );
 
             //We have finished accessing the shared resource. Release the

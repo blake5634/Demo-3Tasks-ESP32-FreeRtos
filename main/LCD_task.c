@@ -36,7 +36,7 @@ extern void handle_error(char* msg);
 
 char lcd_LOG_message[] = "CONFIG:DRIVE_LCD:  YES_LCD, We will be using LCD via i2c";
 
-void LCD_16x2_init()) {
+esp_err_t  LCD_16x2_init() {
     lcd_init();             // Initialize the LCD
     usleep(d100ms);
 
@@ -47,13 +47,14 @@ void LCD_16x2_init()) {
     usleep(d100ms);
     lcd_send_string("lcd_init()2 ...");
     usleep(d100ms);
+    return((esp_err_t) 0);   // no error checks are implemented yet
 }
 
 void LCD_16x2_task(void*){
     int i=0;   // iteration counter
     char numst[20];  // place to hold string to print
     while (1){
-        ESPLOGI(TAG,"  LCD TASK IS ACTIVE");
+        ESP_LOGI(TAG,"  LCD TASK IS ACTIVE");
         if (i2cMutex != NULL){
             if( xSemaphoreTake( i2cMutex, ( TickType_t ) 10 ) == pdTRUE )
             {
@@ -79,7 +80,7 @@ void LCD_16x2_task(void*){
         }
 
 
-}
+     }
 
 #elif   CONFIG_DRIVE_LCD_NO
 #define TAG  "NO LCD_16x2_task"
@@ -88,14 +89,15 @@ char lcd_LOG_message[] = "CONFIG:DRIVE_LCD:  NO_LCD ";
 
 void LCD_16x2_task(void*){
     while(1){
-        ESP_LOGI(TAG, "placeholder: LCD_16x2_task()");
+        ESP_LOGI(TAG, "LCD not configed: placeholder: LCD_16x2_task()");
         vTaskDelay(2000/portTICK_PERIOD_MS);
     }
 }
 
 
-void LCD_16x2_init() {
-    ESP_LOGI(TAG, "placeholder: LCD_16x2_init()");
+esp_err_t LCD_16x2_init() {
+    ESP_LOGI(TAG, "LCD not configed: placeholder: LCD_16x2_init()");
+    return(esp_err_t 1);  // conf for no LCD is not an error but we can ID it
 }
 #else
 #error "unsupported LCD config"
