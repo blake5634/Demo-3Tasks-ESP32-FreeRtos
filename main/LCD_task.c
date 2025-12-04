@@ -97,7 +97,7 @@ void LCD_16x2_task(void*){
 
 esp_err_t LCD_16x2_init() {
     ESP_LOGI(TAG, "LCD not configed: placeholder: LCD_16x2_init()");
-    return(esp_err_t 1);  // conf for no LCD is not an error but we can ID it
+    return((esp_err_t) 1);  // conf for no LCD is not an error but we can ID it
 }
 #else
 #error "unsupported LCD config"
