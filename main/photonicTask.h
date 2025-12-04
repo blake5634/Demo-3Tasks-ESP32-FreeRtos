@@ -3,6 +3,11 @@
 #include "esp_log.h"
 #include "unistd.h"
 
+// declarations
+idf_err_t init_photonics()
+void photonics_task(void*)
+
+
 // pin assignments for photonics
 #define PIN_EXCIT_DRIVE   GPIO_NUM_0   //GPIO-00, module pin 4
 #define PIN_ADC_PD        GPIO_NUM_12  //GPIO-12, module pin 6

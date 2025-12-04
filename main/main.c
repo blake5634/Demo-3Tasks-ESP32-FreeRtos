@@ -21,6 +21,7 @@
 #include "esp_system.h"
 #include "i2c_lcd.h"
 #include "unistd.h"
+#include "photonicTask.h"
 
 
 //
