@@ -20,10 +20,6 @@
 extern SemaphoreHandle_t i2cMutex;
 extern void handle_error(char* msg);
 
-// void LCD_16x2_task(void*);
-// void LCD_16x2_init(void) ;
-void LCD_task(void*); 
-
 /*************************   LCD code
  *
  *
@@ -36,6 +32,7 @@ void LCD_task(void*);
  *   (select "BH_demo_Configuration2")
  */
 #ifdef  CONFIG_DRIVE_LCD_YES
+#define TAG  "DRIVE LCD_16x2_task"
 
 void LCD_reset(int lcd_addr) {
     int lcd = lcd_addr;

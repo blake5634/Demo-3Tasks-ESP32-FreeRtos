@@ -4,7 +4,7 @@
 #include "unistd.h"
 
 // declarations
-idf_err_t init_photonics()
+esp_err_t init_photonics()
 void photonics_task(void*)
 
 
