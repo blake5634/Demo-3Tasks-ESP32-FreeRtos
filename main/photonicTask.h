@@ -1,6 +1,11 @@
 #include "esp_log.h"
 #include "unistd.h"
 
+// declarations
+idf_err_t init_photonics()
+void photonics_task(void*)
+
+
 // pin assignments for photonics
 #define PIN_EXCIT_DRIVE   0
 #define PIN_ADC_PD        0
