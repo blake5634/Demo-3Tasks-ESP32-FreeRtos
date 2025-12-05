@@ -11,7 +11,7 @@
  *
  */
 
-esp_err_t lcd_err; // Variable to store I2C communication errors
+esp_err_t lcd_error; // Variable to store I2C communication errors
 static const char *TAG = "LCD"; // Tag for logging
 
 static int i2cMasterinit = 0;  // flag to show i2c is setup
