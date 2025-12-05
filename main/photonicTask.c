@@ -17,13 +17,14 @@
 
 
 
-void init_photonics() {
-
+void init_photonics(void) {
+    int x = 5;
+    int y = 2;
+    return x+y;
     //   1) set PIN_EXCIT_DRIVE to voltage output
 
     //   2) set PIN_PIN_ADC_PD to input to the ADC
     //   connect ADC  https://docs.espressif.com/projects/esp-idf/en/release-v4.4/esp32/api-reference/peripherals/adc.html
-
 }
 
 

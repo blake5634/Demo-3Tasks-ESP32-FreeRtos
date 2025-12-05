@@ -1,11 +1,13 @@
 #ifndef PHOTONIC_TASK_H //prevent double includes
 #define PHOTONIC_TASK_H
+#endif
+
 #include "esp_log.h"
 #include "unistd.h"
 
-// declarations
-idf_err_t init_photonics()
-void photonics_task(void*)
+// declarationss
+esp_err_t init_photonics(void);
+void photonic_task(void*);
 
 
 // pin assignments for photonics

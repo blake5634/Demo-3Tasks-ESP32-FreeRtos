@@ -20,6 +20,7 @@
 #include "led_strip.h"
 #include "esp_system.h"
 #include "i2c_lcd.h"
+#include "LCD_task.h"
 #include "unistd.h"
 #include "photonicTask.h"
 
@@ -39,23 +40,19 @@
 #define TASK_PRIO_3         3
 #define TASK_PRIO_2         2
 #define COMP_LOOP_PERIOD    5000
-#define SEM_CREATE_ERR_STR                "semaphore creation failed"
-#define QUEUE_CREATE_ERR_STR              "queue creation failed"
+#define SEM_CREATE_ERR_STR      "semaphore creation failed"
+#define QUEUE_CREATE_ERR_STR    "queue creation failed"
 
+/* No clue what these are!!
 int comp_creating_task_entry_func(int argc, char **argv);
 int comp_queue_entry_func(int argc, char **argv);
 int comp_lock_entry_func(int argc, char **argv);
 int comp_task_notification_entry_func(int argc, char **argv);
 int comp_batch_proc_example_entry_func(int argc, char **argv);
-
-#define SLAVE_ADDRESS1_LCD 0x27
-#define SLAVE_ADDRESS2_LCD 0x26
+*/
 
 
-
-// LCD Driver related tasks
-// void LCD_16x2_task(void*);  // as  modified by Frankie for multiple LCDs
-void LCD_reset(int);
+// LED Task related functions (in this file)
 static void configure_led(void);
 static void setLedFromState(void);
 
@@ -65,17 +62,19 @@ static void setLedFromState(void);
 /////////// BH
 // Local function prototypes:
 
-//FREE-RTOS tasks:
+void handle_error(char* );  // log an error to console and freeze
+
+
+//FREE-RTOS tasks defined here:
 // blinker state
 static uint8_t s_led_state = 0;
 static void LED_task(void*);
 static void hello_task(void *arg);
-void LCD_task1(void *lcd_addr);
+// defined in LCD_task.h
+// void LCD_task1(void *lcd_addr);
 // void LCD_task2(void *lcd_addr);  // we're only using one in TPT-finder
 
 
-
-void handle_error(char* );
 
 #define TAG  "TPT-Photonics"
 
@@ -159,6 +158,7 @@ static void configure_led(void)
         .strip_gpio_num = BLINK_GPIO,
         .max_leds = 1, // at least one LED on board
     };
+// RMT is the required config for WaveShare ESP32-C6
 #if CONFIG_BLINK_LED_STRIP_BACKEND_RMT
     led_strip_rmt_config_t rmt_config = {
         .resolution_hz = 10 * 1000 * 1000, // 10MHz
@@ -178,7 +178,10 @@ static void configure_led(void)
     led_strip_clear(led_strip);
 }
 
-#elif CONFIG_BLINK_LED_GPIO   // if this were configured to use GPIO (not what waveshare ESP32C5-Zero uses)
+
+
+// if this were configured to use GPIO (NOT what waveshare ESP32C6-Zero uses)
+#elif CONFIG_BLINK_LED_GPIO
 
 static void setLedFromState(void)
 {
@@ -267,8 +270,9 @@ void app_main(void)
      *  Display messages on the LCD
      */
     uint8_t lcd_address1 = SLAVE_ADDRESS1_LCD;
+    void* argptr = &lcd_address1;
     // uint8_t lcd_address2 = SLAVE_ADDRESS2_LCD;
-    xTaskCreatePinnedToCore(LCD_task1, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address1, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(LCD_task1, "LCD 16x2 Task", DEFAULT_STACK, argptr, TASK_PRIO_2, NULL, tskNO_AFFINITY);
     // xTaskCreatePinnedToCore(LCD_task2, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "LCD task(s) created");
 
@@ -278,7 +282,8 @@ void app_main(void)
      *    Generate 100Hz cycle and coordinate OFF time  ON time and
      *      ADC readings
      */
-    xTaskCreatePinnedToCore(photonic_task, "Photonics Task", DEFAULT_STACK, NULL, TASK_PRIO_3, NULL, tskNO_AFFINITY);
+    argptr = NULL;
+    xTaskCreatePinnedToCore(photonic_task, "Photonics Task", DEFAULT_STACK, argptr, TASK_PRIO_3, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "Photonics task created");
 
 }
