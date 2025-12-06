@@ -112,7 +112,7 @@ SemaphoreHandle_t i2cMutex = NULL;
 static void LED_task(void*)
 {
     while (1) {
-        ESP_LOGI(TAG, "Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
+        // ESP_LOGI(TAG, "Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
         setLedFromState();
         /* Toggle the LED state */
         s_led_state = !s_led_state;
@@ -251,14 +251,16 @@ void app_main(void)
      *
      * Start up the Free-RTOS Tasks
      */
+    void* argptr = NULL;  // use for task arguments
 
     ESP_LOGI(TAG, "\n\n      Starting task(s)...\n\n");
 
     /*
      *   HELLO WORLD on serial console
-     */
+     *
     xTaskCreatePinnedToCore(hello_task, "Hello World Task", DEFAULT_STACK, NULL, TASK_PRIO_3, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "Hello world (serial) task created");
+    */
 
     /*
      * Flash the onboard LED
@@ -266,24 +268,26 @@ void app_main(void)
     xTaskCreatePinnedToCore(LED_task, "LED Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "LED task created");
 
+
+    //
+    // Generate 100Hz cycle and coordinate OFF time  ON time and
+    //        ADC readings
+    //
+    argptr = NULL;
+    xTaskCreatePinnedToCore(photonic_task, "Photonics Task", DEFAULT_STACK, argptr, TASK_PRIO_3, NULL, tskNO_AFFINITY);
+    ESP_LOGI(TAG, "Photonics task created");
+
+
     /*
-     *  Display messages on the LCD
-     */
+    //
+    // Display messages on the LCD
+    //
     uint8_t lcd_address1 = SLAVE_ADDRESS1_LCD;
-    void* argptr = &lcd_address1;
+    argptr = &lcd_address1;
     // uint8_t lcd_address2 = SLAVE_ADDRESS2_LCD;
     xTaskCreatePinnedToCore(LCD_task1, "LCD 16x2 Task", DEFAULT_STACK, argptr, TASK_PRIO_2, NULL, tskNO_AFFINITY);
     // xTaskCreatePinnedToCore(LCD_task2, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);
     ESP_LOGI(TAG, "LCD task(s) created");
 
-
-    /*
-     *
-     *    Generate 100Hz cycle and coordinate OFF time  ON time and
-     *      ADC readings
-     */
-    argptr = NULL;
-    xTaskCreatePinnedToCore(photonic_task, "Photonics Task", DEFAULT_STACK, argptr, TASK_PRIO_3, NULL, tskNO_AFFINITY);
-    ESP_LOGI(TAG, "Photonics task created");
-
+    */
 }

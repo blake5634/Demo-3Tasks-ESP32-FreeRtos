@@ -10,11 +10,16 @@ void photonic_task(void*);
 int collect_PD_ADC(int);
 
 // pin assignments for photonics
+
+// LED output
 #define PIN_EXCIT_DRIVE   GPIO_NUM_0   //GPIO-00, module pin 4
-#define PIN_ADC_PD        GPIO_NUM_12  //GPIO-12, module pin 6
+// ADC parameters:
+#define TPT_PIN_ADC_PD    GPIO_NUM_2  //GPIO-2, module pin 6
+#define ADC_CHANNEL       ADC_CHANNEL_2   // ADC channel for GPIO2
+#define TPT_ADC_ATTEN     ADC_ATTEN_DB_12  // 0-3.1V range (adjust as needed)
 
 // Excitation parameters
-#define SQUARE_WAVE_HALF_MS  50  // ms
+#define SQUARE_WAVE_HALF_MS  250  // ms
 #define N_CYCLES             10  //number of cycles before result
 
 // Detection parameters
