@@ -1,14 +1,13 @@
 #ifndef PHOTONIC_TASK_H //prevent double includes
 #define PHOTONIC_TASK_H
-#endif
 
 #include "esp_log.h"
 #include "unistd.h"
 
-// declarationss
+// declarations
 esp_err_t init_photonics(void);
 void photonic_task(void*);
-
+int collect_PD_ADC(int);
 
 // pin assignments for photonics
 #define PIN_EXCIT_DRIVE   GPIO_NUM_0   //GPIO-00, module pin 4
@@ -21,3 +20,4 @@ void photonic_task(void*);
 // Detection parameters
 #define N_AD_PER_HALF    5   // how many ADC samples per 1/2 cycle
 
+#endif  // prevent double includes

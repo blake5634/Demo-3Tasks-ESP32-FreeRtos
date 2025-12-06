@@ -17,10 +17,10 @@
 
 
 
-void init_photonics(void) {
+esp_err_t init_photonics(void) {
     int x = 5;
     int y = 2;
-    return x+y;
+    return (esp_err_t) x+y;
     //   1) set PIN_EXCIT_DRIVE to voltage output
 
     //   2) set PIN_PIN_ADC_PD to input to the ADC
@@ -28,43 +28,43 @@ void init_photonics(void) {
 }
 
 
-void photonic_task()  {
-    int flag = 1
-    long int on_total = 0
-    long int off_total = 0
+void photonic_task(void*) {
+    int flag = 1;
+    long int on_total = 0;
+    long int off_total = 0;
 
-    int64_t timeused = 0
-    int64_t waveStart = 0
-    int i = 0
-    while(i++ <= N_CYCLES){
-        timeused = 0
-        waveStart = esp_timer_get_time() // microsec
-        flag = flag ^ 1; // toggle the flag
-        if (flag){ // Excitation 1/2 cycle
-            // set excitation LED ON
-            // TODO set output bit HERE
-            // wait 1/2 way through the 1/2 cycle
-            vTaskDelay(pdMS_TO_TICKS(SQUARE_WAVE_HALF_MS>>1));
+    int64_t timeused = 0;
+    int64_t waveStart = 0;
+    int i = 0;  // Added missing semicolon
+    while(i++ <= N_CYCLES) {
+        timeused = 0;  // Added missing semicolon
+        waveStart = esp_timer_get_time(); // microsec - Added missing semicolon
+        flag = flag ^ 1; // Toggle the flag
+
+        if (flag) { // Excitation 1/2 cycle
+            // Set excitation LED ON
+            // TODO: Set output bit HERE
+            // Wait 1/2 way through the 1/2 cycle
+            vTaskDelay(pdMS_TO_TICKS(SQUARE_WAVE_HALF_MS >> 1));
             on_total += collect_PD_ADC(N_AD_PER_HALF);
-        }
-        else{      // OFF 1/2 cycle
-            // set excitation LED OFF
-            // TODo clear output bit here
-            // wait 1/2 way through the 1/2 cycle
-            vTaskDelay(pdMS_TO_TICKS(SQUARE_WAVE_HALF_MS>>1));
+        } else { // OFF 1/2 cycle
+            // Set excitation LED OFF
+            // TODO: Clear output bit here
+            // Wait 1/2 way through the 1/2 cycle
+            vTaskDelay(pdMS_TO_TICKS(SQUARE_WAVE_HALF_MS >> 1));
             on_total += collect_PD_ADC(N_AD_PER_HALF);
             timeused = esp_timer_get_time() - waveStart;
         }
 
-        // finish off the period with more accurate timing, allowing for
-        //   ADC cycles etc.
-        vTaskDelay(pdMS_TO_TICKS(2*SQUARE_WAVE_HALF_MS - timeused/1000));
-        }
+        // Finish off the period with more accurate timing, allowing for
+        // ADC cycles etc.
+        vTaskDelay(pdMS_TO_TICKS(2 * SQUARE_WAVE_HALF_MS - timeused / 1000));
+    }
 
-    // compute the two averages and do something with it.
-
+    // Compute the two averages and do something with it.
 }
 
-int collect_PD_ADC(int n){
-
+int collect_PD_ADC(int n) {
+    // Placeholder implementation; add your ADC collection logic here.
+    return 0; // Example return value, change as needed.
 }
