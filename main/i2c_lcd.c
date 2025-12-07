@@ -61,7 +61,7 @@ void lcd_send_cmd(uint8_t lcd_addr, char cmd)
 
 void lcd_send_data(uint8_t lcd_addr, char data)
 {
-    ESP_LOGI(TAG, "LCD send_data addr: 0x%x  data: 0x%x", lcd_addr, data);
+    // ESP_LOGI(TAG, "LCD send_data addr: 0x%x  data: 0x%x", lcd_addr, data);
     char data_u, data_l;
     uint8_t data_t[4];
     

@@ -86,13 +86,13 @@ void LCD_task1(void* argptr) {
 
     char buffer[20];
     lcd_put_cursor(lcda, 0, 0);   // Set cursor position to   row, column
-    sprintf(buffer, "Works: 0x%x\n", lcda);
+    sprintf(buffer, "Works: 0x%x", lcda);
     lcd_send_string(lcda, buffer);
     ESP_LOGI(LCD_tasks_TAG, "LCD_task1 is starting its LOOP ");
 
     while (1) {
         if (xSemaphoreTake(i2cMutex, portMAX_DELAY) == pdTRUE) {
-            ESP_LOGI(LCD_tasks_TAG, "got the semaphore unlock i2c");
+            // ESP_LOGI(LCD_tasks_TAG, "got the semaphore unlock i2c");
 
             /* We were able to obtain the semaphore and can now access the
 //                 shared resource. */
@@ -106,7 +106,7 @@ void LCD_task1(void* argptr) {
             /* We have finished accessing the shared resource. Release the
             semaphore. */
             xSemaphoreGive(i2cMutex);
-            ESP_LOGI(LCD_tasks_TAG, "unlocked semaphore");
+            // ESP_LOGI(LCD_tasks_TAG, "released semaphore");
 
             vTaskDelay(pdMS_TO_TICKS(1000));
         }
