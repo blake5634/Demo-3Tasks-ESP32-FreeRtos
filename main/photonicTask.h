@@ -5,9 +5,10 @@
 #include "unistd.h"
 
 // declarations
-esp_err_t init_photonics(void);
-void photonic_task(void*);
-int collect_PD_ADC(int);
+esp_err_t init_photonics(void);  // initialize photonic_task
+void photonic_task(void*);     // generate Ex signal and collect data
+unsigned long int collect_PD_ADC(int);       // get an ADC reading from the PD amp.
+unsigned long int photonic_test(void);       // test method for ADC
 
 // pin assignments for photonics
 
@@ -19,10 +20,10 @@ int collect_PD_ADC(int);
 #define TPT_ADC_ATTEN     ADC_ATTEN_DB_12  // 0-3.1V range (adjust as needed)
 
 // Excitation parameters
-#define SQUARE_WAVE_HALF_MS  250  // ms
-#define N_CYCLES             10  //number of cycles before result
+#define SQUARE_WAVE_HALF_MS  50 // ms
+#define N_CYCLES             3  //number of cycles before result
 
 // Detection parameters
-#define N_AD_PER_HALF    5   // how many ADC samples per 1/2 cycle
+#define N_AD_PER_HALF         2  // how many ADC samples per 1/2 cycle
 
 #endif  // prevent double includes

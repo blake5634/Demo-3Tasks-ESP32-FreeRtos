@@ -51,6 +51,18 @@ int comp_task_notification_entry_func(int argc, char **argv);
 int comp_batch_proc_example_entry_func(int argc, char **argv);
 */
 
+//
+//  Choose tasks which will be run
+//
+#define TASK_ON              1
+#define TASK_OFF             0
+
+#define LED_TASK            TASK_ON
+#define LCD_TASK            TASK_OFF
+#define PHOTONIC_TASK       TASK_ON
+#define HELLO_WORKD_TASK    TASK_OFF
+#define PHOTONICS_TEST      TASK_OFF
+
 
 // LED Task related functions (in this file)
 static void configure_led(void);
@@ -232,19 +244,24 @@ void app_main(void)
     i2c_master_init();  // now separate from lcd_init()
     ESP_LOGI(TAG, "i2c master is inited");
     
-    // initialize LCD hardware
-    LCD_reset(SLAVE_ADDRESS1_LCD);
-    // LCD_reset(SLAVE_ADDRESS2_LCD);
-    ESP_LOGI(TAG, "LCD device init completed ");
+    if (LCD_TASK == TASK_ON) {
+        // initialize LCD hardware
+        LCD_reset(SLAVE_ADDRESS1_LCD);
+        // LCD_reset(SLAVE_ADDRESS2_LCD);
+        ESP_LOGI(TAG, "LCD device init completed ");
+    }
 
     // config hardware GPIO pins for on-board LED (board-specific)
-    configure_led();   // defined above for two configs
-    ESP_LOGI(TAG, "on-board LED hardware has been configured.");
+    if (LED_TASK == TASK_ON) {
+        configure_led();   // defined above for two configs
+        ESP_LOGI(TAG, "on-board LED hardware has been configured.");
+    }
 
-    // setup for photonics board interface.
-    init_photonics();
-    ESP_LOGI(TAG, "photonics pinouts have been set");
-
+    if (PHOTONIC_TASK == TASK_ON || PHOTONICS_TEST==TASK_ON) {
+        // setup for photonics board interface.
+        init_photonics();
+        ESP_LOGI(TAG, "photonics pinouts have been set");
+    }
 
 
     /***********************************************************************
@@ -255,39 +272,49 @@ void app_main(void)
 
     ESP_LOGI(TAG, "\n\n      Starting task(s)...\n\n");
 
+    if (HELLO_WORKD_TASK==TASK_ON) {
     /*
      *   HELLO WORLD on serial console
-     *
-    xTaskCreatePinnedToCore(hello_task, "Hello World Task", DEFAULT_STACK, NULL, TASK_PRIO_3, NULL, tskNO_AFFINITY);
-    ESP_LOGI(TAG, "Hello world (serial) task created");
-    */
-
-    /*
-     * Flash the onboard LED
      */
-    xTaskCreatePinnedToCore(LED_task, "LED Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
-    ESP_LOGI(TAG, "LED task created");
+        xTaskCreatePinnedToCore(hello_task, "Hello World Task", DEFAULT_STACK, NULL, TASK_PRIO_3, NULL, tskNO_AFFINITY);
+        ESP_LOGI(TAG, "Hello world (serial) task created");
+        }
 
+    if (LED_TASK==TASK_ON) {
+        /*
+        * Flash the onboard LED
+        */
+        xTaskCreatePinnedToCore(LED_task, "LED Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+        ESP_LOGI(TAG, "LED task created");
+        }
 
-    //
-    // Generate 100Hz cycle and coordinate OFF time  ON time and
-    //        ADC readings
-    //
-    argptr = NULL;
-    xTaskCreatePinnedToCore(photonic_task, "Photonics Task", DEFAULT_STACK, argptr, TASK_PRIO_3, NULL, tskNO_AFFINITY);
-    ESP_LOGI(TAG, "Photonics task created");
+    if (PHOTONIC_TASK==TASK_ON) {
+        //
+        // Generate 100Hz cycle and coordinate OFF time  ON time and
+        //        ADC readings
+        //
+        argptr = NULL;
+        xTaskCreatePinnedToCore(photonic_task, "Photonics Task", DEFAULT_STACK, argptr, TASK_PRIO_3, NULL, tskNO_AFFINITY);
+        ESP_LOGI(TAG, "Photonics task created");
+        }
 
+    if (LCD_TASK==TASK_ON) {
+        //
+        // Display messages on the LCD
+        //
+        uint8_t lcd_address1 = SLAVE_ADDRESS1_LCD;
+        argptr = &lcd_address1;
+        // uint8_t lcd_address2 = SLAVE_ADDRESS2_LCD;
+        xTaskCreatePinnedToCore(LCD_task1, "LCD 16x2 Task", DEFAULT_STACK, argptr, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+        // xTaskCreatePinnedToCore(LCD_task2, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+        ESP_LOGI(TAG, "LCD task(s) created");
+        }
 
-    /*
-    //
-    // Display messages on the LCD
-    //
-    uint8_t lcd_address1 = SLAVE_ADDRESS1_LCD;
-    argptr = &lcd_address1;
-    // uint8_t lcd_address2 = SLAVE_ADDRESS2_LCD;
-    xTaskCreatePinnedToCore(LCD_task1, "LCD 16x2 Task", DEFAULT_STACK, argptr, TASK_PRIO_2, NULL, tskNO_AFFINITY);
-    // xTaskCreatePinnedToCore(LCD_task2, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);
-    ESP_LOGI(TAG, "LCD task(s) created");
-
-    */
+    if(PHOTONICS_TEST==TASK_ON){
+        while(1){
+                int testval = photonic_test();
+                ESP_LOGI(TAG, "A/D Test value: %d", testval);
+                vTaskDelay(pdMS_TO_TICKS(1000));
+                }
+        }
 }

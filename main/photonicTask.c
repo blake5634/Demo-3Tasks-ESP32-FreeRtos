@@ -67,56 +67,70 @@ esp_err_t init_photonics(void) {
 
 void photonic_task(void*) {
     int flag = 1;
-    long int on_total = 0;
-    long int off_total = 0;
+    unsigned long int on_total = 0;
+    unsigned long int off_total = 0;
 
     int64_t timeused = 0;
-    int64_t waveStart = 0;
+    int64_t pulseStart = 0;
     int i = 0;  // Added missing semicolon
     while(1) {
-        while(i++ <= N_CYCLES) {
+        i=0;
+        off_total= 0;
+        on_total = 0;
+        while(i++ < 2*N_CYCLES) {
             timeused = 0;  // Added missing semicolon
-            waveStart = esp_timer_get_time(); // microsec - Added missing semicolon
             flag = flag ^ 1; // Toggle the flag
-
+            pulseStart = esp_timer_get_time(); // microsec - Added missing semicolon
             if (flag) { // Excitation-ON 1/2 cycle
+                // ESP_LOGI(TAG, "Start Excit. half-cycle");
                 // Set excitation LED ON
                 gpio_set_level(PIN_EXCIT_DRIVE, 1);
                 // Wait 1/2 way through the 1/2 cycle
                 vTaskDelay(pdMS_TO_TICKS(SQUARE_WAVE_HALF_MS >> 1));
-            on_total += collect_PD_ADC(N_AD_PER_HALF);
+                on_total += collect_PD_ADC(N_AD_PER_HALF);
             }
             else { // Excitation-OFF 1/2 cycle
+                // ESP_LOGI(TAG, "Start OFF half-cycle");
                 // Set excitation LED OFF
                 gpio_set_level(PIN_EXCIT_DRIVE, 0);
                 // Wait 1/2 way through the 1/2 cycle
                 vTaskDelay(pdMS_TO_TICKS(SQUARE_WAVE_HALF_MS >> 1));
-            off_total += collect_PD_ADC(N_AD_PER_HALF);
-                timeused = esp_timer_get_time() - waveStart;
+                off_total += collect_PD_ADC(N_AD_PER_HALF);
             }
+            timeused = esp_timer_get_time() - pulseStart;  // uSec
             // Finish off the period with more accurate timing, allowing for
             // ADC cycles etc.
-            vTaskDelay(pdMS_TO_TICKS(2 * SQUARE_WAVE_HALF_MS - timeused / 1000));
+            vTaskDelay(pdMS_TO_TICKS(SQUARE_WAVE_HALF_MS - (timeused/ 1000) ) );
             }
 
         // Compute the two averages and do something with it.
-        int npts = N_AD_PER_HALF * 2 * N_CYCLES;
+        int npts = N_AD_PER_HALF * N_CYCLES;
         long int onAvg = on_total/npts;
         long int offAvg = off_total/npts;
-        off_total= 0;
-        on_total = 0;
 
         ESP_LOGI(TAG,"onAvg: %ld offAvg: %ld",onAvg,offAvg);
-
-        vTaskDelay(pdMS_TO_TICKS(5000)); //pause before new cycle
+        ESP_LOGI(TAG, "Completed a cycle ... pausing");
+        vTaskDelay(pdMS_TO_TICKS(500)); //pause before new cycle
         ESP_LOGI(TAG, "Starting a new cycle");
 
         }
     }
 
-int collect_PD_ADC(int n) {
+
+//
+//    Collect one test A/D sample
+//
+unsigned long int photonic_test(void) {
+    return collect_PD_ADC(1);
+    }
+
+unsigned long int collect_PD_ADC(int n) {
     int adc_raw;
-    // Read raw ADC value (0-4095 for 12-bit)
-    adc_oneshot_read(adc1_handle, ADC_CHANNEL_2, &adc_raw);
-    return adc_raw; // return value.
+    int total=0;
+    for (int i=0;i<n;i++) {
+        // Read raw ADC value (0-4095 for 12-bit) n times.
+        adc_oneshot_read(adc1_handle, ADC_CHANNEL_2, &adc_raw);
+        total += adc_raw;
+        }
+    return total; // return value.
     }
