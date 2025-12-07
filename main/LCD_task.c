@@ -21,6 +21,9 @@
 extern SemaphoreHandle_t i2cMutex;
 extern void handle_error(char* msg);
 
+// for sprintf use
+char msg[200];
+
 // void LCD_16x2_task(void*);
 // void LCD_16x2_init(void) ;
 // void LCD_task(void*);
@@ -38,12 +41,13 @@ extern void handle_error(char* msg);
  *   (select "BH_demo_Configuration2")
  */
 
-int check_lcd_addr(uint8_t lcd_addr){
+int check_lcd_addr(uint8_t lcd_addr, char* cmsg){
     int valid = 0;
-    if (lcd_addr==SLAVE_ADDRESS1_LCD) valid = 1;
-    if (lcd_addr==SLAVE_ADDRESS2_LCD) valid = 2;
+    if (lcd_addr==(uint8_t) SLAVE_ADDRESS1_LCD) valid = 1;
+    if (lcd_addr==(uint8_t) SLAVE_ADDRESS2_LCD) valid = 2;
     if(valid==0){
-        handle_error("illegal LCD address (i2c bus)");
+        sprintf(msg, "illegal LCD address (i2c bus): 0x%x  [%s]", lcd_addr, cmsg);
+        handle_error(msg);
         }
     return lcd_addr;
 }
@@ -53,9 +57,11 @@ int check_lcd_addr(uint8_t lcd_addr){
 #define LCD_tasks_TAG "LCD_Tasks:"
 
 void LCD_reset(uint8_t lcd_addr) {
-    uint8_t lcda = check_lcd_addr(lcd_addr);
+    ESP_LOGI(LCD_tasks_TAG, "LCD_Reset: 0x%x", lcd_addr);
+
+    uint8_t lcda = check_lcd_addr(lcd_addr, "LCD_reset()");
     if (xSemaphoreTake(i2cMutex, portMAX_DELAY) == pdTRUE) {
-        printf("Starting: 0x%x\n", lcd_addr);
+        printf("LCD_reset: Starting: 0x%x\n", lcd_addr);
         
         lcd_init(lcda);             // Initialize the LCD
         usleep(d100ms);
@@ -72,8 +78,9 @@ void LCD_reset(uint8_t lcd_addr) {
 
 
 void LCD_task1(void* argptr) {
-    uint8_t lcd_addr = (uint8_t) argptr;
-    uint8_t lcda = check_lcd_addr(lcd_addr);
+    ESP_LOGI(LCD_tasks_TAG, "LCD_task1 is starting up NOW");
+    uint8_t lcd_addr = *((uint8_t *)argptr);
+    uint8_t lcda = check_lcd_addr(lcd_addr,"LCD_task1 startup");
     int i=0;   // iteration counter
     char numst[20];  // place to hold string to print
 
@@ -81,10 +88,12 @@ void LCD_task1(void* argptr) {
     lcd_put_cursor(lcda, 0, 0);   // Set cursor position to   row, column
     sprintf(buffer, "Works: 0x%x\n", lcda);
     lcd_send_string(lcda, buffer);
-    ESP_LOGI(LCD_tasks_TAG, "LCD_task1() is starting up NOW");
+    ESP_LOGI(LCD_tasks_TAG, "LCD_task1 is starting its LOOP ");
 
     while (1) {
         if (xSemaphoreTake(i2cMutex, portMAX_DELAY) == pdTRUE) {
+            ESP_LOGI(LCD_tasks_TAG, "got the semaphore unlock i2c");
+
             /* We were able to obtain the semaphore and can now access the
 //                 shared resource. */
             lcd_put_cursor(lcda, 1, 0);
@@ -97,14 +106,16 @@ void LCD_task1(void* argptr) {
             /* We have finished accessing the shared resource. Release the
             semaphore. */
             xSemaphoreGive(i2cMutex);
+            ESP_LOGI(LCD_tasks_TAG, "unlocked semaphore");
+
             vTaskDelay(pdMS_TO_TICKS(1000));
         }
     }
 }
 
 void LCD_task2(void* argptr) {
-    uint8_t lcd_addr = (uint8_t) argptr;
-    uint8_t lcda = check_lcd_addr(lcd_addr);
+    uint8_t lcd_addr = *((uint8_t *)argptr);
+    uint8_t lcda = check_lcd_addr(lcd_addr,"LCD task2 startup");
     char buffer[20];
     
     sprintf(buffer, "LCD 0x%x works!", lcda);

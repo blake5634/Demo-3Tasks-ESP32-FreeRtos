@@ -14,7 +14,15 @@ unsigned long int photonic_test(void);       // test method for ADC
 
 // LED output
 #define PIN_EXCIT_DRIVE   GPIO_NUM_0   //GPIO-00, module pin 4
+
 // ADC parameters:
+
+// The options for attenuation
+// ADC_ATTEN_DB_0      // 0 dB attenuation, range: 0 - ~750 mV
+// ADC_ATTEN_DB_2_5    // 2.5 dB attenuation, range: 0 - ~1050 mV
+// ADC_ATTEN_DB_6      // 6 dB attenuation, range: 0 - ~1300 mV
+// ADC_ATTEN_DB_12     // 12 dB attenuation, range: 0 - ~3100 mV
+
 #define TPT_PIN_ADC_PD    GPIO_NUM_2  //GPIO-2, module pin 6
 #define ADC_CHANNEL       ADC_CHANNEL_2   // ADC channel for GPIO2
 #define TPT_ADC_ATTEN     ADC_ATTEN_DB_12  // 0-3.1V range (adjust as needed)

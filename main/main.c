@@ -58,9 +58,9 @@ int comp_batch_proc_example_entry_func(int argc, char **argv);
 #define TASK_OFF             0
 
 #define LED_TASK            TASK_ON
-#define LCD_TASK            TASK_OFF
-#define PHOTONIC_TASK       TASK_ON
-#define HELLO_WORKD_TASK    TASK_OFF
+#define LCD_TASK            TASK_ON
+#define PHOTONIC_TASK       TASK_OFF
+#define HELLO_WORLD_TASK    TASK_OFF
 #define PHOTONICS_TEST      TASK_OFF
 
 
@@ -106,12 +106,7 @@ void handle_error(char* msg){
 }
 
 
-
-
-
 extern char lcd_LOG_message[];
-
-
 
 // i2c mutex:  this is used to make sure only one task can transact on i2c at a time.
 SemaphoreHandle_t i2cMutex = NULL;
@@ -272,7 +267,7 @@ void app_main(void)
 
     ESP_LOGI(TAG, "\n\n      Starting task(s)...\n\n");
 
-    if (HELLO_WORKD_TASK==TASK_ON) {
+    if (HELLO_WORLD_TASK==TASK_ON) {
     /*
      *   HELLO WORLD on serial console
      */
@@ -305,9 +300,9 @@ void app_main(void)
         uint8_t lcd_address1 = SLAVE_ADDRESS1_LCD;
         argptr = &lcd_address1;
         // uint8_t lcd_address2 = SLAVE_ADDRESS2_LCD;
-        xTaskCreatePinnedToCore(LCD_task1, "LCD 16x2 Task", DEFAULT_STACK, argptr, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+        xTaskCreatePinnedToCore(LCD_task1, "LCD Task", DEFAULT_STACK, argptr, TASK_PRIO_2, NULL, tskNO_AFFINITY);
         // xTaskCreatePinnedToCore(LCD_task2, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);
-        ESP_LOGI(TAG, "LCD task(s) created");
+        ESP_LOGI(TAG, "LCD task created");
         }
 
     if(PHOTONICS_TEST==TASK_ON){

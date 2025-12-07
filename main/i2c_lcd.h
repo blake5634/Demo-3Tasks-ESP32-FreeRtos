@@ -13,6 +13,9 @@
 
 // I2C master port number (number of I2C peripheral interfaces available depends on the chip)
 #define I2C_MASTER_NUM              0
+// Define the I2C number to be used
+#define I2C_NUM                     I2C_NUM_0
+
 
 // I2C master clock frequency
 #define I2C_MASTER_FREQ_HZ          400000
@@ -26,8 +29,6 @@
 // Timeout for I2C master in milliseconds
 #define I2C_MASTER_TIMEOUT_MS       1000
 
-// Define the I2C number to be used
-#define I2C_NUM                     I2C_NUM_0
 
 // LCD command definitions
 #define LCD_CMD_CLEAR_DISPLAY 0x01
