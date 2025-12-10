@@ -54,7 +54,7 @@
 #define LCD_TASK            TASK_ON
 #define PHOTONIC_TASK       TASK_OFF
 #define HELLO_WORLD_TASK    TASK_ON
-#define IDLE_MON_TASK       TASK_ON
+#define IDLE_MON_TASK       TASK_OFF
 #define PHOTONICS_TEST      TASK_OFF
 
 
@@ -205,19 +205,22 @@ static void configure_led(void)
  *    End of "blink code block"
  ***************************************************************/
 
-long int idle_tick_counter = 0;
+long int idle_run_counter = 0;
 
 
 static void hello_task(void *arg)
 {
-
+    static long int prev_tick_cnt = 0;
     int i=0;
     while(1) {
         vTaskDelay(2000/portTICK_PERIOD_MS);
         printf("\n\n\n");
         i++;
-        printf("Hello world! (task rep: %d) (idle: %ld)\n", i,idle_tick_counter);
-        idle_tick_counter = 0; // reset every 2 sec
+        long int T = xTaskGetTickCount();  // current tick count
+        long int deltaT  = T - prev_tick_cnt;
+        printf("Hello world! (task rep: %d) (idle: %ld/%ld)\n", i,idle_run_counter,deltaT);
+        prev_tick_cnt = T;
+        idle_run_counter = 0; // reset every 2 sec
         printf("\n\n\n");
     }
 }
@@ -230,8 +233,7 @@ static void hello_task(void *arg)
  */
 static void idle_mon(void *arg){
     while(1){
-        idle_tick_counter++;
-        vTaskDelay(1);  // wait 1 tick
+        idle_run_counter++;
     }
 }
 
@@ -313,10 +315,12 @@ void app_main(void)
         ESP_LOGI(TAG, "LCD task created");
         }
 
-    // if(IDLE_MON_TASK==TASK_ON){
-    //     argptr = NULL;
-    //     xTaskCreatePinnedToCore(idle_mon, "Idle Monitor", DEFAULT_STACK, argptr, TASK_PRIO_1, NULL, tskNO_AFFINITY);
-    //     }
+    if(IDLE_MON_TASK==TASK_ON){
+        argptr = NULL;
+        xTaskCreatePinnedToCore(idle_mon, "Idle Monitor", DEFAULT_STACK, argptr, TASK_PRIO_1, NULL, tskNO_AFFINITY);
+        }
+
+    vTaskStartScheduler();
 
     if(PHOTONICS_TEST==TASK_ON){
         while(1){
