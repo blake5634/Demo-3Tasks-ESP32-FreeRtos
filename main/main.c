@@ -39,17 +39,10 @@
 #define PROMPT_STR CONFIG_IDF_TARGET
 #define TASK_PRIO_3         3
 #define TASK_PRIO_2         2
+#define TASK_PRIO_1         1
 #define COMP_LOOP_PERIOD    5000
 #define SEM_CREATE_ERR_STR      "semaphore creation failed"
 #define QUEUE_CREATE_ERR_STR    "queue creation failed"
-
-/* No clue what these are!!
-int comp_creating_task_entry_func(int argc, char **argv);
-int comp_queue_entry_func(int argc, char **argv);
-int comp_lock_entry_func(int argc, char **argv);
-int comp_task_notification_entry_func(int argc, char **argv);
-int comp_batch_proc_example_entry_func(int argc, char **argv);
-*/
 
 //
 //  Choose tasks which will be run
@@ -60,15 +53,14 @@ int comp_batch_proc_example_entry_func(int argc, char **argv);
 #define LED_TASK            TASK_ON
 #define LCD_TASK            TASK_ON
 #define PHOTONIC_TASK       TASK_OFF
-#define HELLO_WORLD_TASK    TASK_OFF
+#define HELLO_WORLD_TASK    TASK_ON
+#define IDLE_MON_TASK       TASK_ON
 #define PHOTONICS_TEST      TASK_OFF
 
 
 // LED Task related functions (in this file)
 static void configure_led(void);
 static void setLedFromState(void);
-
-
 
 
 /////////// BH
@@ -213,6 +205,8 @@ static void configure_led(void)
  *    End of "blink code block"
  ***************************************************************/
 
+long int idle_tick_counter = 0;
+
 
 static void hello_task(void *arg)
 {
@@ -222,8 +216,22 @@ static void hello_task(void *arg)
         vTaskDelay(2000/portTICK_PERIOD_MS);
         printf("\n\n\n");
         i++;
-        printf("Hello world! (task rep: %d) \n", i);
+        printf("Hello world! (task rep: %d) (idle: %ld)\n", i,idle_tick_counter);
+        idle_tick_counter = 0; // reset every 2 sec
         printf("\n\n\n");
+    }
+}
+
+
+/*
+ *  Task to count and display idle ticks
+ *
+ *
+ */
+static void idle_mon(void *arg){
+    while(1){
+        idle_tick_counter++;
+        vTaskDelay(1);  // wait 1 tick
     }
 }
 
@@ -304,6 +312,11 @@ void app_main(void)
         // xTaskCreatePinnedToCore(LCD_task2, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);
         ESP_LOGI(TAG, "LCD task created");
         }
+
+    // if(IDLE_MON_TASK==TASK_ON){
+    //     argptr = NULL;
+    //     xTaskCreatePinnedToCore(idle_mon, "Idle Monitor", DEFAULT_STACK, argptr, TASK_PRIO_1, NULL, tskNO_AFFINITY);
+    //     }
 
     if(PHOTONICS_TEST==TASK_ON){
         while(1){
