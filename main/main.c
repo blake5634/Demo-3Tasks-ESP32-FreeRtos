@@ -45,19 +45,11 @@
 #define SEM_CREATE_ERR_STR      "semaphore creation failed"
 #define QUEUE_CREATE_ERR_STR    "queue creation failed"
 
-/* No clue what these are!!
-int comp_creating_task_entry_func(int argc, char **argv);
-int comp_queue_entry_func(int argc, char **argv);
-int comp_lock_entry_func(int argc, char **argv);
-int comp_task_notification_entry_func(int argc, char **argv);
-int comp_batch_proc_example_entry_func(int argc, char **argv);
-*/
-
 //
 //  Choose tasks which will be run
 //
-#define TASK_ON              1
-#define TASK_OFF             0
+#define TASK_ON              0
+#define TASK_OFF             1
 
 #define LED_TASK            TASK_ON
 #define LCD_TASK            TASK_OFF
@@ -70,8 +62,7 @@ int comp_batch_proc_example_entry_func(int argc, char **argv);
 // LED Task related functions (in this file)
 static void configure_led(void);
 static void setLedFromState(void);
-
-
+static void setLedFromArg(uint8_t);
 
 
 /////////// BH
@@ -85,18 +76,16 @@ void handle_error(char* );  // log an error to console and freeze
 static uint8_t s_led_state = 0;
 static void LED_task(void*);
 static void hello_task(void *arg);
-// defined in LCD_task.h
-// void LCD_task1(void *lcd_addr);
-// void LCD_task2(void *lcd_addr);  // we're only using one in TPT-finder
-
-
 
 #define TAG  "TPT-main.c"
 
 //   BH defines
 #define DEFAULT_STACK  4096
-#define BLINK_PERIOD    1000 //ms
+#define BLINK_PERIOD    300 //ms
 #define BLINK_GPIO 8
+#define LED_BIT_ON      (uint8_t) 1
+#define LED_BIT_OFF     (uint8_t) 0
+
 
 // Configure LED task
 #define LED_TASK_TIMED    1  // 1 = periodic as above; 0 = load avg pwm
@@ -139,10 +128,10 @@ static void LED_task(void*)
             //
             //   LED task to show Free CPU Time
             //
-            gpio_set_level(BLINK_GPIO, 0); // turn off LED  (indicate busy)
+            setLedFromArg(LED_BIT_ON); // turn   LED  (indicate busy)
             vTaskDelay(1); // wait for next tick
             }
-        ESP_LOGI(TAG, "Starting LED cycle (%d)", (int)LED_TASK_TIMED);
+        // ESP_LOGI(TAG, "Starting LED cycle (%d)", (int)LED_TASK_TIMED);
         }
 }
 
@@ -150,7 +139,7 @@ static void LED_task(void*)
 static void cpu_load_task(void*)
 {
     while(1){
-        gpio_set_level(BLINK_GPIO, 1); // turn ON LED (indicate idle)
+        setLedFromArg(LED_BIT_OFF); // turn   LED (indicate idle)
         vTaskDelay(1);
         }
 }
@@ -170,6 +159,20 @@ static void cpu_load_task(void*)
 #ifdef CONFIG_BLINK_LED_STRIP
 
 static led_strip_handle_t led_strip;
+
+static void setLedFromArg(uint8_t on_off)
+{
+    /* If the addressable LED is enabled */
+    if (on_off) {
+        /* Set the LED pixel using RGB from 0 (0%) to 255 (100%) for each color */
+        led_strip_set_pixel(led_strip, 0, 16, 16, 16);
+        /* Refresh the strip to send data */
+        led_strip_refresh(led_strip);
+    } else {
+        /* Set all LED off to clear all pixels */
+        led_strip_clear(led_strip);
+    }
+}
 
 static void setLedFromState(void)
 {
@@ -224,6 +227,11 @@ static void setLedFromState(void)
     /* Set the GPIO level according to the state (LOW or HIGH)*/
     gpio_set_level(BLINK_GPIO, s_led_state);
 }
+
+static void setLedFromArg(uint8_t on_off)
+    {
+    gpio_set_level(BLINK_GPIO, on_off);
+    }
 
 static void configure_led(void)
 {
@@ -300,7 +308,7 @@ void app_main(void)
     /*
      *   HELLO WORLD on serial console
      */
-        xTaskCreatePinnedToCore(hello_task, "Hello World Task", DEFAULT_STACK, NULL, TASK_PRIO_3, NULL, tskNO_AFFINITY);
+        xTaskCreatePinnedToCore(hello_task, "Hello World Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
         ESP_LOGI(TAG, "Hello world (serial) task created");
         }
 
@@ -308,14 +316,18 @@ void app_main(void)
         /*
         * Flash the onboard LED
         */
+        //  set to highest priority for use in Idle time
         xTaskCreatePinnedToCore(LED_task, "LED Task", DEFAULT_STACK, NULL, TASK_PRIO_4, NULL, tskNO_AFFINITY);
         ESP_LOGI(TAG, "LED task created");
 
+        //
+        //  launch the cpu_load_task for measurement (via LED) of idle time
+        //
         if (!LED_TASK_TIMED){
             ESP_LOGI(TAG, "LED configured for idle time... (!LED_TASK_TIMED)");
             //
             // low prio task to indicate idle CPU (light off)
-            xTaskCreatePinnedToCore(cpu_load_task, "CPU load Task", DEFAULT_STACK, NULL, TASK_PRIO_1, NULL, tskNO_AFFINITY);
+            xTaskCreatePinnedToCore(cpu_load_task, "CPU load Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
 
             ESP_LOGI(TAG, "cpu idle task created");
             }
