@@ -37,8 +37,10 @@
 /*------------------------------------------------------------*/
 /* Macros */
 #define PROMPT_STR CONFIG_IDF_TARGET
+#define TASK_PRIO_4         4
 #define TASK_PRIO_3         3
 #define TASK_PRIO_2         2
+#define TASK_PRIO_1         1
 #define COMP_LOOP_PERIOD    5000
 #define SEM_CREATE_ERR_STR      "semaphore creation failed"
 #define QUEUE_CREATE_ERR_STR    "queue creation failed"
@@ -58,10 +60,11 @@ int comp_batch_proc_example_entry_func(int argc, char **argv);
 #define TASK_OFF             0
 
 #define LED_TASK            TASK_ON
-#define LCD_TASK            TASK_ON
-#define PHOTONIC_TASK       TASK_OFF
-#define HELLO_WORLD_TASK    TASK_OFF
+#define LCD_TASK            TASK_OFF
+#define PHOTONIC_TASK       TASK_ON
+#define HELLO_WORLD_TASK    TASK_ON
 #define PHOTONICS_TEST      TASK_OFF
+#define CPU_LOAD_TASK       TASK_ON
 
 
 // LED Task related functions (in this file)
@@ -88,12 +91,15 @@ static void hello_task(void *arg);
 
 
 
-#define TAG  "TPT-Photonics"
+#define TAG  "TPT-main.c"
 
 //   BH defines
 #define DEFAULT_STACK  4096
-#define BLINK_PERIOD    300 //ms
+#define BLINK_PERIOD    1000 //ms
 #define BLINK_GPIO 8
+
+// Configure LED task
+#define LED_TASK_TIMED    1  // 1 = periodic as above; 0 = load avg pwm
 
 
 
@@ -119,11 +125,33 @@ SemaphoreHandle_t i2cMutex = NULL;
 static void LED_task(void*)
 {
     while (1) {
-        // ESP_LOGI(TAG, "Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
-        setLedFromState();
-        /* Toggle the LED state */
-        s_led_state = !s_led_state;
-        vTaskDelay(BLINK_PERIOD / portTICK_PERIOD_MS);
+        if(LED_TASK_TIMED){
+            //
+            // Normal LED Task:
+            //
+            // ESP_LOGI(TAG, "Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
+            setLedFromState();
+            /* Toggle the LED state */
+            s_led_state = !s_led_state;
+            vTaskDelay(BLINK_PERIOD / portTICK_PERIOD_MS);
+            }
+        else {
+            //
+            //   LED task to show Free CPU Time
+            //
+            gpio_set_level(BLINK_GPIO, 0); // turn off LED  (indicate busy)
+            vTaskDelay(1); // wait for next tick
+            }
+        ESP_LOGI(TAG, "Starting LED cycle (%d)", (int)LED_TASK_TIMED);
+        }
+}
+
+// set to lowest priority
+static void cpu_load_task(void*)
+{
+    while(1){
+        gpio_set_level(BLINK_GPIO, 1); // turn ON LED (indicate idle)
+        vTaskDelay(1);
         }
 }
 
@@ -192,6 +220,7 @@ static void configure_led(void)
 
 static void setLedFromState(void)
 {
+    ESP_LOGI(TAG,"Setting LED from state");
     /* Set the GPIO level according to the state (LOW or HIGH)*/
     gpio_set_level(BLINK_GPIO, s_led_state);
 }
@@ -279,8 +308,18 @@ void app_main(void)
         /*
         * Flash the onboard LED
         */
-        xTaskCreatePinnedToCore(LED_task, "LED Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+        xTaskCreatePinnedToCore(LED_task, "LED Task", DEFAULT_STACK, NULL, TASK_PRIO_4, NULL, tskNO_AFFINITY);
         ESP_LOGI(TAG, "LED task created");
+
+        if (!LED_TASK_TIMED){
+            ESP_LOGI(TAG, "LED configured for idle time... (!LED_TASK_TIMED)");
+            //
+            // low prio task to indicate idle CPU (light off)
+            xTaskCreatePinnedToCore(cpu_load_task, "CPU load Task", DEFAULT_STACK, NULL, TASK_PRIO_1, NULL, tskNO_AFFINITY);
+
+            ESP_LOGI(TAG, "cpu idle task created");
+            }
+
         }
 
     if (PHOTONIC_TASK==TASK_ON) {
