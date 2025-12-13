@@ -85,10 +85,11 @@ static void hello_task(void *arg);
 #define BLINK_GPIO 8
 #define LED_BIT_ON      (uint8_t) 1
 #define LED_BIT_OFF     (uint8_t) 0
+#define IDLE_GPIO       20
 
 
 // Configure LED task
-#define LED_TASK_TIMED    1  // 1 = periodic as above; 0 = load avg pwm
+#define LED_TASK_TIMED    0  // 1 = periodic as above; 0 = load avg pwm
 
 
 
@@ -129,6 +130,7 @@ static void LED_task(void*)
             //   LED task to show Free CPU Time
             //
             setLedFromArg(LED_BIT_ON); // turn   LED  (indicate busy)
+            gpio_set_level(IDLE_GPIO, 0);  // Test point 33 on V02board
             vTaskDelay(1); // wait for next tick
             }
         // ESP_LOGI(TAG, "Starting LED cycle (%d)", (int)LED_TASK_TIMED);
@@ -140,6 +142,7 @@ static void cpu_load_task(void*)
 {
     while(1){
         setLedFromArg(LED_BIT_OFF); // turn   LED (indicate idle)
+        gpio_set_level(IDLE_GPIO, 1);  // Test point 33 on V02board
         vTaskDelay(1);
         }
 }
@@ -235,10 +238,11 @@ static void setLedFromArg(uint8_t on_off)
 
 static void configure_led(void)
 {
-    ESP_LOGI(TAG, "Configure pins to blink GPIO LED!");
+    ESP_LOGI(TAG, "Configure GPIO pins (GPIO LED MODE ONLY)!");
     gpio_reset_pin(BLINK_GPIO);
     /* Set the GPIO as a push/pull output */
     gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
+
 }
 
 #else
@@ -295,6 +299,12 @@ void app_main(void)
         ESP_LOGI(TAG, "photonics pinouts have been set");
     }
 
+    if (CPU_LOAD_TASK == TASK_ON){
+        // Test Point TP33
+        gpio_reset_pin(IDLE_GPIO);
+        /* Set the GPIO as a push/pull output */
+        gpio_set_direction(IDLE_GPIO, GPIO_MODE_OUTPUT);
+    }
 
     /***********************************************************************
      *
