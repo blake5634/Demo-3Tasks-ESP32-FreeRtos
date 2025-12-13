@@ -73,6 +73,7 @@ void photonic_task(void*) {
     int64_t timeused = 0;
     int64_t pulseStart = 0;
     int i = 0;  // Added missing semicolon
+    int cycleCnt = 0;
     while(1) {
         i=0;
         off_total= 0;
@@ -109,7 +110,8 @@ void photonic_task(void*) {
         long int offAvg = off_total/npts;
 
         ESP_LOGI(TAG,"onAvg: %ld offAvg: %ld",onAvg,offAvg);
-        ESP_LOGI(TAG, "Completed a cycle ... pausing");
+        ESP_LOGI(TAG, "Completed cycle %d ... pausing",cycleCnt);
+        cycleCnt++;
         vTaskDelay(pdMS_TO_TICKS(500)); //pause before new cycle
         ESP_LOGI(TAG, "Starting a new cycle");
 

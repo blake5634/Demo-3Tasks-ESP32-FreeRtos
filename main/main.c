@@ -48,10 +48,10 @@
 //
 //  Choose tasks which will be run
 //
-#define TASK_ON              0
-#define TASK_OFF             1
+#define TASK_ON              1
+#define TASK_OFF             0
 
-#define LED_TASK            TASK_ON
+#define LED_TASK            TASK_OFF
 #define LCD_TASK            TASK_OFF
 #define PHOTONIC_TASK       TASK_ON
 #define HELLO_WORLD_TASK    TASK_ON
@@ -85,11 +85,11 @@ static void hello_task(void *arg);
 #define BLINK_GPIO 8
 #define LED_BIT_ON      (uint8_t) 1
 #define LED_BIT_OFF     (uint8_t) 0
-#define IDLE_GPIO       20
+#define IDLE_GPIO       20    // PC bd Test Point TP33
 
 
 // Configure LED task
-#define LED_TASK_TIMED    0  // 1 = periodic as above; 0 = load avg pwm
+#define LED_TASK_TIMED    1  // 1 = periodic as above; 0 = load avg pwm
 
 
 
@@ -193,7 +193,7 @@ static void setLedFromState(void)
 
 static void configure_led(void)
 {
-    ESP_LOGI(TAG, "Configure pins to blink ADDRESSABLE LED!");
+    ESP_LOGI(TAG, "Configure pins to blink LED_STRIP LED");
     /* LED strip initialization with the GPIO and pixels number*/
     led_strip_config_t strip_config = {
         .strip_gpio_num = BLINK_GPIO,
@@ -201,6 +201,8 @@ static void configure_led(void)
     };
 // RMT is the required config for WaveShare ESP32-C6
 #if CONFIG_BLINK_LED_STRIP_BACKEND_RMT
+    ESP_LOGI(TAG, "Configure LED_STRIP back-end RMT");
+
     led_strip_rmt_config_t rmt_config = {
         .resolution_hz = 10 * 1000 * 1000, // 10MHz
         .flags.with_dma = false,
@@ -222,11 +224,14 @@ static void configure_led(void)
 
 
 // if this were configured to use GPIO (NOT what waveshare ESP32C6-Zero uses)
+//
+//   NOT for TPT-Finder HW
+//
 #elif CONFIG_BLINK_LED_GPIO
 
 static void setLedFromState(void)
 {
-    ESP_LOGI(TAG,"Setting LED from state");
+    ESP_LOGI(TAG,"GPIO: Setting LED from state");
     /* Set the GPIO level according to the state (LOW or HIGH)*/
     gpio_set_level(BLINK_GPIO, s_led_state);
 }
@@ -271,6 +276,13 @@ static void hello_task(void *arg)
 void app_main(void)
 {
     /*
+     * Validate task config
+     */
+    if (CPU_LOAD_TASK == TASK_ON && LED_TASK == TASK_OFF){
+        ESP_LOGI(TAG,"Error:  LED_TASK must be ON for CPU_LOAD_TASK.");
+        handle_error("Stopping.");
+    }
+    /*
      * Hardware and Software setups and inits
      */
 
@@ -300,6 +312,8 @@ void app_main(void)
     }
 
     if (CPU_LOAD_TASK == TASK_ON){
+        configure_led();   // defined above for two configs
+        ESP_LOGI(TAG, "on-board LED hardware has been configured.");
         // Test Point TP33
         gpio_reset_pin(IDLE_GPIO);
         /* Set the GPIO as a push/pull output */
