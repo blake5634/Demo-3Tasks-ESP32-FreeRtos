@@ -4,6 +4,7 @@
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "driver/gptimer.h"
 #include "driver/gpio.h"
 #include "driver/i2c.h"
 #include "esp_chip_info.h"
@@ -24,6 +25,26 @@
  *   New approach: use timer-driven ISR to get control of wave frequency
  *   and sampling times.
  */
+
+// Forward declaration
+static bool timer_isr_callback(gptimer_handle_t timer,
+                               const gptimer_alarm_event_data_t *edata,
+                               void *user_ctx);
+
+
+// State machine states
+typedef enum {
+    STATE_GPIO_TOGGLE,
+    STATE_SAMPLE_1,
+    STATE_SAMPLE_2,
+    STATE_SAMPLE_3,
+} timer_state_t;
+
+// Globals
+static gptimer_handle_t gptimer = NULL;
+static volatile timer_state_t current_state = STATE_GPIO_TOGGLE;
+static volatile uint8_t gpio_level = 0;
+static volatile uint32_t sample_count = 0;
 
 // ADC handle
 adc_oneshot_unit_handle_t adc1_handle;
@@ -56,11 +77,11 @@ esp_err_t init_photonics(void) {
     adc_oneshot_new_unit(&init_config, &adc1_handle);
 
     // Configure the channel
-    adc_oneshot_chan_cfg_t config = {
+    adc_oneshot_chan_cfg_t AD_chan_config = {
         .bitwidth = ADC_BITWIDTH_DEFAULT,  // 12-bit for ESP32-C6
         .atten = TPT_ADC_ATTEN
     };
-    adc_oneshot_config_channel(adc1_handle, ADC_CHANNEL_2, &config);
+    adc_oneshot_config_channel(adc1_handle, ADC_CHANNEL_2, &AD_chan_config);
     ESP_LOGI(TAG, "ADC Configured");
 
     // Doc ref:
@@ -69,93 +90,68 @@ esp_err_t init_photonics(void) {
     // Initialize the Timer
     //     Claide.ai helped
 
-    // Timer configuration
-    timer_config_t config = {
-        .divider = TIMER_DIVIDER,
-        .counter_dir = TIMER_COUNT_UP,
-        .counter_en = TIMER_PAUSE,
-        .alarm_en = TIMER_ALARM_EN,
-        .auto_reload = TIMER_AUTORELOAD_EN,
+     // Timer configuration - NO DIVIDER in v5.x!
+    gptimer_config_t timer_config = {
+        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+        .direction = GPTIMER_COUNT_UP,
+        .resolution_hz = TIMER_RESOLUTION_HZ,  // 1MHz resolution
     };
+    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
 
-    // Initialize timer
-    timer_init(TIMER_GROUP, TIMER_IDX, &config);
-    // Set timer counter value to 0
-    timer_set_counter_value(TIMER_GROUP, TIMER_IDX, 0);
-    // Set alarm value (when to trigger interrupt)
-    timer_set_alarm_value(TIMER_GROUP, TIMER_IDX, TIMER_ALARM_VALUE);
-    // Enable timer interrupt
-    timer_enable_intr(TIMER_GROUP, TIMER_IDX);
-    // Register ISR callback
-    timer_isr_callback_add(TIMER_GROUP, TIMER_IDX, timer_isr_callback, NULL, 0);
+    // Register callback
+    gptimer_event_callbacks_t cbs = {
+        .on_alarm = timer_isr_callback
+        };
+
+    ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, NULL));
+
+    // Enable timer
+    ESP_ERROR_CHECK(gptimer_enable(gptimer));
+
+    // Set first alarm to start quickly
+    gptimer_alarm_config_t alarm_config = {
+        .alarm_count = 100,  // 100µs
+        .flags.auto_reload_on_alarm = false,
+    };
+    ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
+
     // Start timer
-    timer_start(TIMER_GROUP, TIMER_IDX);
+    ESP_ERROR_CHECK(gptimer_start(gptimer));
+
+
+
     return statusCode;
     }
 
 // ISR is static for fast (in-ram) execution
 //     Claide.ai helped
-static bool IRAM_ATTR timer_isr_callback(void *args)
-{
+static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
+                                         const gptimer_alarm_event_data_t *edata,
+                                         void *user_ctx)  {
     // Toggle the GPIO to drive the LED driver wave
     static uint8_t level = 0;
-    gpio_set_level(OUTPUT_GPIO, level);
+    gpio_set_level(PIN_EXCIT_DRIVE, level);
     level = !level;
 
     // Return whether we need to yield to a higher priority task
     return false;
-}
+   }
 
 void photonic_task(void*) {
+    /*
     int flag = 1;
     unsigned long int on_total = 0;
     unsigned long int off_total = 0;
 
     int64_t timeused = 0;
     int64_t pulseStart = 0;
-    int i = 0;  // Added missing semicolon
+    int i = 0;  // Added missing semicolon */
     int cycleCnt = 0;
+
     while(1) {
-        i=0;
-        off_total= 0;
-        on_total = 0;
-        while(i++ < 2*N_CYCLES) {
-            timeused = 0;  // Added missing semicolon
-            flag = flag ^ 1; // Toggle the flag
-            pulseStart = esp_timer_get_time(); // microsec - Added missing semicolon
-            if (flag) { // Excitation-ON 1/2 cycle
-                // ESP_LOGI(TAG, "Start Excit. half-cycle");
-                // Set excitation LED ON
-                gpio_set_level(PIN_EXCIT_DRIVE, 1);
-                // Wait 1/2 way through the 1/2 cycle
-                vTaskDelay(pdMS_TO_TICKS(SQUARE_WAVE_HALF_MS >> 1));
-                on_total += collect_PD_ADC(N_AD_PER_HALF);
-            }
-            else { // Excitation-OFF 1/2 cycle
-                // ESP_LOGI(TAG, "Start OFF half-cycle");
-                // Set excitation LED OFF
-                gpio_set_level(PIN_EXCIT_DRIVE, 0);
-                // Wait 1/2 way through the 1/2 cycle
-                vTaskDelay(pdMS_TO_TICKS(SQUARE_WAVE_HALF_MS >> 1));
-                off_total += collect_PD_ADC(N_AD_PER_HALF);
-            }
-            timeused = esp_timer_get_time() - pulseStart;  // uSec
-            // Finish off the period with more accurate timing, allowing for
-            // ADC cycles etc.
-            vTaskDelay(pdMS_TO_TICKS(SQUARE_WAVE_HALF_MS - (timeused/ 1000) ) );
-            }
-
-        // Compute the two averages and do something with it.
-        int npts = N_AD_PER_HALF * N_CYCLES;
-        long int onAvg = on_total/npts;
-        long int offAvg = off_total/npts;
-
-        ESP_LOGI(TAG,"onAvg: %ld offAvg: %ld",onAvg,offAvg);
-        ESP_LOGI(TAG, "Completed cycle %d ... pausing",cycleCnt);
         cycleCnt++;
-        vTaskDelay(pdMS_TO_TICKS(500)); //pause before new cycle
-        ESP_LOGI(TAG, "Starting a new cycle");
-
+        ESP_LOGI(TAG, "photonic task is doing nothing");
+        vTaskDelay(pdMS_TO_TICKS(1000));
         }
     }
 

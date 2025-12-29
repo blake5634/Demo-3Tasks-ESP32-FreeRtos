@@ -22,7 +22,7 @@
 #include "i2c_lcd.h"
 #include "LCD_task.h"
 #include "unistd.h"
-#include "photonicTask.h"
+#include "timer_Photo.h"
 
 
 //
@@ -53,6 +53,8 @@
 
 #define LED_TASK            TASK_ON
 #define LCD_TASK            TASK_OFF
+
+// PHOTONIC TASK now timer driven
 #define PHOTONIC_TASK       TASK_ON
 #define HELLO_WORLD_TASK    TASK_ON
 #define PHOTONICS_TEST      TASK_OFF

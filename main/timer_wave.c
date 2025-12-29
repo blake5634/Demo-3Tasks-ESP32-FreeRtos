@@ -148,7 +148,7 @@ extern uint16_t read_adc(void);  // Replace with your actual function
 #define SAMPLES_PER_PHASE 3
 static volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
 static volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
-static volatile uint8_t sample_index = 0;
+static volatile uint8_t  sample_index = 0;
 
 
 // Timer ISR with state machine
