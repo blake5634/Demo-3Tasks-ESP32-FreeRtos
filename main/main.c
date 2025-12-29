@@ -51,7 +51,7 @@
 #define TASK_ON              1
 #define TASK_OFF             0
 
-#define LED_TASK            TASK_OFF
+#define LED_TASK            TASK_ON
 #define LCD_TASK            TASK_OFF
 #define PHOTONIC_TASK       TASK_ON
 #define HELLO_WORLD_TASK    TASK_ON
