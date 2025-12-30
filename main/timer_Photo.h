@@ -16,6 +16,7 @@ unsigned long int photonic_test(void);       // test method for ADC
 
 // LED output
 #define PIN_EXCIT_DRIVE   GPIO_NUM_0   //GPIO-00, module pin 4
+#define OUTPUT_GPIO    PIN_EXCIT_DRIVE
 
 // ADC parameters:
 
@@ -29,13 +30,13 @@ unsigned long int photonic_test(void);       // test method for ADC
 #define ADC_CHANNEL       ADC_CHANNEL_2     // ADC channel for GPIO2
 #define TPT_ADC_ATTEN     ADC_ATTEN_DB_12   // 0-3.1V range (adjust as needed)
 
+
 // Timer Configuration
 //   (claude.ai)
 
 //  Compute timer config
 // For 200 Hz square wave
 #define SQUARE_WAVE_FREQ_HZ  200
-// #define TIMER_DIVIDER        80      // Hardware timer clock divider
 #define TIMER_RESOLUTION_HZ  1000000  // 1MHz = 1µs resolution
 #define TIMER_SCALE          (TIMER_BASE_CLK / TIMER_DIVIDER)  // Convert to seconds
 // TIMER_BASE_CLK is 80 MHz for ESP32
@@ -48,6 +49,10 @@ unsigned long int photonic_test(void);       // test method for ADC
 #define TIMER_GROUP          TIMER_GROUP_0
 #define TIMER_IDX            TIMER_0
 
+// Timing definitions (in microseconds)
+#define PHASE_DURATION_US    2500     // 2.5 ms per phase (200 Hz)
+#define SAMPLE_DELAY_US      1150     // Wait 1.15ms before starting samples
+#define INTER_SAMPLE_US      100      // 100µs between samples
 
 // Excitation parameters
 #define N_CYCLES             3  //number of cycles before result

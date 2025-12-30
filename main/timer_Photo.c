@@ -45,7 +45,14 @@ static gptimer_handle_t gptimer = NULL;
 static volatile timer_state_t current_state = STATE_GPIO_TOGGLE;
 static volatile uint8_t gpio_level = 0;
 static volatile uint32_t sample_count = 0;
- uint64_t next_alarm_count;
+
+
+#define SAMPLES_PER_PHASE 3
+static volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
+static volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
+
+// Your ADC function
+extern uint16_t read_adc(void);
 
 // ADC handle
 adc_oneshot_unit_handle_t adc1_handle;
@@ -129,14 +136,78 @@ esp_err_t init_photonics(void) {
 static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
                                          const gptimer_alarm_event_data_t *edata,
                                          void *user_ctx)  {
-    // Toggle the GPIO to drive the LED driver wave
+
+    uint64_t next_alarm_count=1000;
+
+    switch(current_state) {
+        case STATE_GPIO_TOGGLE:
+            // Toggle GPIO
+            gpio_set_level(OUTPUT_GPIO, gpio_level);
+            gpio_level = !gpio_level;
+
+            // Schedule first sample in middle of phase
+            next_alarm_count = edata->alarm_value + SAMPLE_DELAY_US;
+            current_state = STATE_SAMPLE_1;
+            break;
+
+        case STATE_SAMPLE_1:
+            // Take first A/D sample
+            if (gpio_level == 1) {
+                samples_positive[0] = read_adc();
+            } else {
+                samples_zero[0] = read_adc();
+            }
+
+            next_alarm_count = edata->alarm_value + INTER_SAMPLE_US;
+            current_state = STATE_SAMPLE_2;
+            break;
+
+        case STATE_SAMPLE_2:
+            // Take second A/D sample
+            if (gpio_level == 1) {
+                samples_positive[1] = read_adc();
+            } else {
+                samples_zero[1] = read_adc();
+            }
+
+            next_alarm_count = edata->alarm_value + INTER_SAMPLE_US;
+            current_state = STATE_SAMPLE_3;
+            break;
+
+        case STATE_SAMPLE_3:
+            // Take third A/D sample
+            if (gpio_level == 1) {
+                samples_positive[2] = read_adc();
+            } else {
+                samples_zero[2] = read_adc();
+            }
+
+            sample_count++;
+
+            // Calculate remaining time until next GPIO toggle
+            next_alarm_count = edata->alarm_value +
+                              (PHASE_DURATION_US - SAMPLE_DELAY_US - 2*INTER_SAMPLE_US - 50);
+            current_state = STATE_GPIO_TOGGLE;
+            break;
+    }
+
+    // Set next alarm
+    gptimer_alarm_config_t alarm_config = {
+        .alarm_count = next_alarm_count,
+        .flags.auto_reload_on_alarm = false,
+    };
+    gptimer_set_alarm_action(timer, &alarm_config);
+
+
+    /*
+     *    // Toggle the GPIO to drive the LED driver wave
     static uint8_t level = 0;
     gpio_set_level(PIN_EXCIT_DRIVE, level);
     level = !level;
     sample_count++;
     // Return whether we need to yield to a higher priority task
 
-/*
+
     next_alarm_count = 1000;
     // Set next alarm
     gptimer_alarm_config_t alarm_config = {
@@ -168,6 +239,10 @@ void photonic_task(void*) {
     }
 
 
+uint16_t read_adc(void){
+    for (int i=0;i<10000;i++) {int x = 5; x++;}
+    return 477;
+    }
 //
 //    Collect one test A/D sample
 //
