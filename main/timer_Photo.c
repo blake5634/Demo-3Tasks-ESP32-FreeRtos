@@ -45,6 +45,7 @@ static gptimer_handle_t gptimer = NULL;
 static volatile timer_state_t current_state = STATE_GPIO_TOGGLE;
 static volatile uint8_t gpio_level = 0;
 static volatile uint32_t sample_count = 0;
+ uint64_t next_alarm_count;
 
 // ADC handle
 adc_oneshot_unit_handle_t adc1_handle;
@@ -110,8 +111,8 @@ esp_err_t init_photonics(void) {
 
     // Set first alarm to start quickly
     gptimer_alarm_config_t alarm_config = {
-        .alarm_count = 100,  // 100µs
-        .flags.auto_reload_on_alarm = false,
+        .alarm_count = 2500,  // 100µs
+        .flags.auto_reload_on_alarm = true,
     };
     ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
 
@@ -132,8 +133,19 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
     static uint8_t level = 0;
     gpio_set_level(PIN_EXCIT_DRIVE, level);
     level = !level;
-
+    sample_count++;
     // Return whether we need to yield to a higher priority task
+
+/*
+    next_alarm_count = 1000;
+    // Set next alarm
+    gptimer_alarm_config_t alarm_config = {
+        .alarm_count = next_alarm_count,
+        .flags.auto_reload_on_alarm = false,
+    };
+    gptimer_set_alarm_action(timer, &alarm_config);
+    */
+
     return false;
    }
 
@@ -150,7 +162,7 @@ void photonic_task(void*) {
 
     while(1) {
         cycleCnt++;
-        ESP_LOGI(TAG, "photonic task is doing nothing");
+        ESP_LOGI(TAG, "photonic task is doing nothing: %d/%d",cycleCnt, (int)sample_count);
         vTaskDelay(pdMS_TO_TICKS(1000));
         }
     }
