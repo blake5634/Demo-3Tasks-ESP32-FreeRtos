@@ -26,11 +26,22 @@
  *   and sampling times.
  */
 
-// Forward declaration
+//
+// Forward declarations
+//
+
+//  ISR for timer
 static bool timer_isr_callback(gptimer_handle_t timer,
                                const gptimer_alarm_event_data_t *edata,
                                void *user_ctx);
+// my ADC function
+uint16_t read_adc(void);
 
+// Transfer samples from ISR mem to task
+static void get_latest_samples(uint16_t*, uint16_t*);
+
+// Spinlock for protecting sample data
+static portMUX_TYPE samples_mux = portMUX_INITIALIZER_UNLOCKED;
 
 // State machine states
 typedef enum {
@@ -47,12 +58,10 @@ static volatile uint8_t gpio_level = 0;
 static volatile uint32_t sample_count = 0;
 
 
-#define SAMPLES_PER_PHASE 3
+#define SAMPLES_PER_PHASE 2
 static volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
 static volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
 
-// Your ADC function
-extern uint16_t read_adc(void);
 
 // ADC handle
 adc_oneshot_unit_handle_t adc1_handle;
@@ -137,7 +146,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
                                          const gptimer_alarm_event_data_t *edata,
                                          void *user_ctx)  {
 
-    uint64_t next_alarm_count=1000;
+    uint64_t next_alarm_count=1000;  // set to 1000 to avoid warning
 
     switch(current_state) {
         case STATE_GPIO_TOGGLE:
@@ -199,7 +208,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
     gptimer_set_alarm_action(timer, &alarm_config);
 
 
-    /*
+    /*Non-State-Machine version:
      *    // Toggle the GPIO to drive the LED driver wave
     static uint8_t level = 0;
     gpio_set_level(PIN_EXCIT_DRIVE, level);
@@ -229,20 +238,41 @@ void photonic_task(void*) {
     int64_t timeused = 0;
     int64_t pulseStart = 0;
     int i = 0;  // Added missing semicolon */
+    uint16_t pos[3], low[3];  // places to store data
     int cycleCnt = 0;
 
     while(1) {
         cycleCnt++;
-        ESP_LOGI(TAG, "photonic task is doing nothing: %d/%d",cycleCnt, (int)sample_count);
+
+        // Get latest samples
+        get_latest_samples(pos, low);
+
+        printf("Run Cycle %d - Positive phase: %d, %d | Zero phase: %d, %d\n",
+                cycleCnt, pos[0], pos[1], low[0], low[1]);
+        ESP_LOGI(TAG, "photonic task is alive: %d/%d",cycleCnt, (int)sample_count);
         vTaskDelay(pdMS_TO_TICKS(1000));
         }
     }
 
+// Retrieve samples from main code
+void get_latest_samples(uint16_t *pos_samples, uint16_t *zero_samples)
+{
+    portENTER_CRITICAL(&samples_mux);
+    for (int i = 0; i < SAMPLES_PER_PHASE; i++) {
+        pos_samples[i] = samples_positive[i];
+        zero_samples[i] = samples_zero[i];
+    }
+    portEXIT_CRITICAL(&samples_mux);
+}
+
 
 uint16_t read_adc(void){
-    for (int i=0;i<10000;i++) {int x = 5; x++;}
-    return 477;
+    int n_readSum = 0;
+    n_readSum = collect_PD_ADC(2);
+    return n_readSum >>1;  // average of 2 readings (~22uSec)
     }
+
+
 //
 //    Collect one test A/D sample
 //
