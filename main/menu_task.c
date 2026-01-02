@@ -16,6 +16,7 @@ void menu_task(void *pvParameters)
     while (1)
     {
         // Display menu
+        ESP_LOGI(TAG, "I'm displaying a menu now...");
         printf("\n================================\n");
         printf("        SYSTEM MENU\n");
         printf("================================\n");

@@ -23,6 +23,7 @@
 #include "LCD_task.h"
 #include "unistd.h"
 #include "timer_Photo.h"
+#include "menu_task.h"
 
 
 //
@@ -55,6 +56,7 @@
 #define LCD_TASK            TASK_OFF
 
 // PHOTONIC TASK now timer driven
+#define MENU_TASK           TASK_OFF
 #define PHOTONIC_TASK       TASK_ON
 #define HELLO_WORLD_TASK    TASK_ON
 #define PHOTONICS_TEST      TASK_OFF
@@ -284,10 +286,14 @@ void app_main(void)
         ESP_LOGI(TAG,"Error:  LED_TASK must be ON for CPU_LOAD_TASK.");
         handle_error("Stopping.");
     }
-    /*
-     * Hardware and Software setups and inits
-     */
 
+
+
+    /*
+     *
+     * Hardware and Software setups and INITIALIZATIONS
+     *
+     */
     //   Set up i2c for all tasks
     i2cMutex = xSemaphoreCreateMutex();
     ESP_LOGI(TAG, "mutex created");
@@ -329,6 +335,11 @@ void app_main(void)
     void* argptr = NULL;  // use for task arguments
 
     ESP_LOGI(TAG, "\n\n      Starting task(s)...\n\n");
+
+    if (MENU_TASK==TASK_ON){
+        xTaskCreatePinnedToCore(menu_task, "Menu Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+        ESP_LOGI(TAG, "Menu Task Created");
+    }
 
     if (HELLO_WORLD_TASK==TASK_ON) {
     /*
