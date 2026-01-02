@@ -1,0 +1,9 @@
+My software development environment is:
+
+    ESP32-IDF  Version: 5.4.x
+
+    FreeRTOS tasks with a 10Mz OS-tick.
+
+    3 tasks with periods of 1 second,
+
+    1 ISR with clock-driven interrupts every 2500 uSec.
