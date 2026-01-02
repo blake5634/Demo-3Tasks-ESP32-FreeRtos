@@ -53,7 +53,7 @@ typedef enum {
 
 // Globals
 static gptimer_handle_t gptimer = NULL;
-static volatile timer_state_t current_state = STATE_GPIO_TOGGLE;
+static volatile timer_state_t isr_state = STATE_GPIO_TOGGLE;
 static volatile uint8_t gpio_level = 0;
 static volatile uint32_t sample_count = 0;
 
@@ -148,7 +148,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
 
     uint64_t next_alarm_count=1000;  // set to 1000 to avoid warning
 
-    switch(current_state) {
+    switch(isr_state) {
         case STATE_GPIO_TOGGLE:
             // Toggle GPIO
             gpio_set_level(OUTPUT_GPIO, gpio_level);
@@ -156,7 +156,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
 
             // Schedule first sample in middle of phase
             next_alarm_count = edata->alarm_value + SAMPLE_DELAY_US;
-            current_state = STATE_SAMPLE_1;
+            isr_state = STATE_SAMPLE_1;
             break;
 
         case STATE_SAMPLE_1:
@@ -168,7 +168,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
             }
 
             next_alarm_count = edata->alarm_value + INTER_SAMPLE_US;
-            current_state = STATE_SAMPLE_2;
+            isr_state = STATE_SAMPLE_2;
             break;
 
         case STATE_SAMPLE_2:
@@ -180,7 +180,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
             }
 
             next_alarm_count = edata->alarm_value + INTER_SAMPLE_US;
-            current_state = STATE_SAMPLE_3;
+            isr_state = STATE_SAMPLE_3;
             break;
 
         case STATE_SAMPLE_3:
@@ -196,7 +196,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
             // Calculate remaining time until next GPIO toggle
             next_alarm_count = edata->alarm_value +
                               (PHASE_DURATION_US - SAMPLE_DELAY_US - 2*INTER_SAMPLE_US - 50);
-            current_state = STATE_GPIO_TOGGLE;
+            isr_state = STATE_GPIO_TOGGLE;
             break;
     }
 

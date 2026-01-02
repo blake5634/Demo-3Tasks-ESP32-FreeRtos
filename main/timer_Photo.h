@@ -33,25 +33,20 @@ unsigned long int photonic_test(void);       // test method for ADC
 
 // Timer Configuration
 //   (claude.ai)
-
-//  Compute timer config
-// For 200 Hz square wave
-#define SQUARE_WAVE_FREQ_HZ  200
-#define TIMER_RESOLUTION_HZ  1000000  // 1MHz = 1µs resolution
-#define TIMER_SCALE          (TIMER_BASE_CLK / TIMER_DIVIDER)  // Convert to seconds
-// TIMER_BASE_CLK is 80 MHz for ESP32
-
-// Calculate alarm value for half period (toggle interval)
-#define TIMER_INTERVAL_US    (1000000 / (SQUARE_WAVE_FREQ_HZ * 2))  // 2500 µs
-#define TIMER_ALARM_VALUE    (TIMER_INTERVAL_US * TIMER_SCALE / 1000000)
-
 // Timer Hardware defines
 #define TIMER_GROUP          TIMER_GROUP_0
 #define TIMER_IDX            TIMER_0
 
+
+//  Compute timer config
+// For 200 Hz square wave
+#define SQUARE_WAVE_FREQ_HZ  200    // HZ  desired freq
+#define TIMER_RESOLUTION_HZ  1000000  // 1MHz = 1µs resolution
+// TIMER_BASE_CLK is 80 MHz for ESP32
+
 // Timing definitions (in microseconds)
-#define PHASE_DURATION_US    2500     // 2.5 ms per phase (200 Hz)
-#define SAMPLE_DELAY_US      1150     // Wait 1.15ms before starting samples
+#define PHASE_DURATION_US    TIMER_RESOLUTION_HZ / (2*SQUARE_WAVE_FREQ_HZ)   // e.g. 1/2 cycle
+#define SAMPLE_DELAY_US      PHASE_DURATION_US/2     // Wait 1/4 cycle before starting samples
 #define INTER_SAMPLE_US      100      // 100µs between samples
 
 // Excitation parameters
