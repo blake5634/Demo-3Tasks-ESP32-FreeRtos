@@ -102,7 +102,7 @@ void state_machine_task(void *pvParameters){
                 gptimer_set_alarm_action(gptimer, &alarm_config);
 
                 // Wait for ISR to finish up and stop itself
-                vTaskDelay(pdMS_TO_TICKS(500));
+                vTaskDelay(pdMS_TO_TICKS(1500));
                 state = SM_State_Uploading;
                 break;
             }
