@@ -1,10 +1,13 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/uart.h"
+#include "driver/gptimer.h"
 #include "esp_log.h"
 #include <stdio.h>
 #include <string.h>
 #include "driver/gpio.h"
+#include "esp_system.h"
+#include "esp_timer.h"
 
 #include "timer_Photo.h"
 #include "state_machine.h"
@@ -63,7 +66,6 @@ static SM_state_t state=SM_State_Paused;
 
 
 void state_machine_task(void *pvParameters){
-    static uint16_t databuff[PHOTO_DATA_BUF_SIZE];
 
     while (1)
     {
@@ -86,6 +88,20 @@ void state_machine_task(void *pvParameters){
             }
             case SM_State_Acquiring:{
                 ESP_LOGI(TAG, "*****SM_State_Acquiring");
+                // initialize data pointers
+                data_ptr = data_buffer;
+                phase_ptr = phase_buffer;
+                sensing_cycle_count = 0;
+
+                // Start the isr going for excitation and acquisition
+                // Set next alarm
+                gptimer_alarm_config_t alarm_config = {
+                    .alarm_count = next_alarm_count,
+                    .flags.auto_reload_on_alarm = false,
+                };
+                gptimer_set_alarm_action(gptimer, &alarm_config);
+
+                // Wait for ISR to finish up and stop itself
                 vTaskDelay(pdMS_TO_TICKS(500));
                 state = SM_State_Uploading;
                 break;

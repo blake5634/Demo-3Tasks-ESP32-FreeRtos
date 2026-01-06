@@ -3,10 +3,6 @@
 
 #include "esp_log.h"
 
-
-#define DAQ_DURATION    0.5 // sec
-#define PHOTO_DATA_BUF_SIZE   600 // N_AD_PER_HALF * 2 * DAQ_DURATION * SQUARE_WAVE_FREQ_HZ
-
 // Pin assignments for state machine
 
 #define END_PAUSE_INPUT    GPIO_NUM_20  // board TP 33

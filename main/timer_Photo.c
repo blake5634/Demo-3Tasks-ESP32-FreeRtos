@@ -46,25 +46,6 @@ static void get_latest_samples(uint16_t*, uint16_t*);
 // Spinlock for protecting sample data
 static portMUX_TYPE samples_mux = portMUX_INITIALIZER_UNLOCKED;
 
-// ISR state machine states
-typedef enum {
-    STATE_GPIO_TOGGLE,
-    STATE_SAMPLE_1,
-    STATE_SAMPLE_2,
-    STATE_SAMPLE_3,
-} timer_state_t;
-
-// Globals for ISR
-static gptimer_handle_t gptimer = NULL;
-static volatile timer_state_t isr_state = STATE_GPIO_TOGGLE;
-static volatile uint8_t gpio_level = 0;
-static volatile uint32_t sensing_cycle_count = 0;
-
-
-static volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
-static volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
-
-
 // ADC handle
 adc_oneshot_unit_handle_t adc1_handle;
 
@@ -103,7 +84,7 @@ esp_err_t init_photonics(void) {
     adc_oneshot_config_channel(adc1_handle, ADC_CHANNEL_2, &AD_chan_config);
     ESP_LOGI(TAG, "ADC Configured");
 
-    // Doc ref:
+    // ADC Documentation ref:
     //   connect ADC  https://docs.espressif.com/projects/esp-idf/en/release-v4.4/esp32/api-reference/peripherals/adc.html
 
     // Initialize the Timer
@@ -154,13 +135,17 @@ static void start_timer(gptimer_handle_t gptimer){
 static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
                                          const gptimer_alarm_event_data_t *edata,
                                          void *user_ctx)  {
-
-    uint64_t next_alarm_count=1000;  // set to 1000 to avoid warning
-
     switch(isr_state) {
         case STATE_GPIO_TOGGLE:
             // Toggle GPIO
             gpio_set_level(OUTPUT_GPIO, gpio_level);
+            if(gpio_level) {
+                phase = EXCITATION_ON;
+                }
+            else {
+                phase = EXCITATION_OFF;
+                }
+
             gpio_level = !gpio_level;
 
             // Schedule first sample in middle of phase
@@ -172,51 +157,69 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
             // Take first A/D sample
             if (gpio_level == 1) {
                 samples_positive[0] = read_adc();
+                *data_ptr = samples_positive[0];
             } else {
                 samples_zero[0] = read_adc();
+                *data_ptr= samples_zero[0];
             }
+            *phase_ptr = phase;
 
             next_alarm_count = edata->alarm_value + INTER_SAMPLE_US;
             isr_state = STATE_SAMPLE_2;
+            data_ptr++;  phase_ptr++;
             break;
 
         case STATE_SAMPLE_2:
             // Take second A/D sample
             if (gpio_level == 1) {
                 samples_positive[1] = read_adc();
+                *data_ptr = samples_positive[1];
             } else {
                 samples_zero[1] = read_adc();
+                *data_ptr = samples_zero[1];
             }
+            *phase_ptr = phase;
 
             next_alarm_count = edata->alarm_value + INTER_SAMPLE_US;
             isr_state = STATE_SAMPLE_3;
+            data_ptr++;  phase_ptr++;
             break;
 
         case STATE_SAMPLE_3:
             // Take third A/D sample
             if (gpio_level == 1) {
                 samples_positive[2] = read_adc();
+                *data_ptr = samples_positive[2];
             } else {
                 samples_zero[2] = read_adc();
+                *data_ptr = samples_zero[2];
             }
+            *phase_ptr = phase;
 
 
             // Calculate remaining time until next GPIO toggle
             next_alarm_count = edata->alarm_value +
                               (PHASE_DURATION_US - SAMPLE_DELAY_US - 2*INTER_SAMPLE_US - 50);
             isr_state = STATE_GPIO_TOGGLE;
+            if (phase==EXCITATION_OFF){
+                sensing_cycle_count++;  //  count complete cycles (on+off phases)
+                }
+            data_ptr++;  phase_ptr++;
             break;
     }
 
-    sensing_cycle_count++;  //  count complete cycles (on+off phases)
-    // Set next alarm
-    gptimer_alarm_config_t alarm_config = {
-        .alarm_count = next_alarm_count,
-        .flags.auto_reload_on_alarm = false,
-    };
-    gptimer_set_alarm_action(timer, &alarm_config);
-
-
+    if (sensing_cycle_count< SENSING_CYCLES_NUM){
+        // Set next alarm
+        gptimer_alarm_config_t alarm_config = {
+            .alarm_count = next_alarm_count,
+            .flags.auto_reload_on_alarm = false,
+        };
+        gptimer_set_alarm_action(timer, &alarm_config);
+    }
+    // else - timer does not cause any more interrupts.
+    else {
+        ESP_LOGI(TAG, "ISR has completed %d sample acquisition. ", SENSING_CYCLES_NUM);
+    }
     /*Non-State-Machine version:
      *    // Toggle the GPIO to drive the LED driver wave
     static uint8_t level = 0;
@@ -235,7 +238,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
     gptimer_set_alarm_action(timer, &alarm_config);
     */
 
-    return false;
+    return false;// return to interrupted task (true = switch to highest prio task)
    }
 
 void photonic_task(void*) {

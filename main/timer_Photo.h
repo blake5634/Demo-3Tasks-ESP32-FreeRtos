@@ -3,16 +3,8 @@
 
 #include "esp_log.h"
 #include "unistd.h"
-// #include "driver/gptimer.h"
-
-// declarations
-esp_err_t init_photonics(void);  // initialize photonic_task
-void photonic_task(void*);     // generate Ex signal and collect data
-unsigned long int collect_PD_ADC(int);       // get an ADC reading from the PD amp.
-unsigned long int photonic_test(void);       // test method for ADC
-
-
-// pin assignments for photonics
+#include "driver/gptimer.h"
+#include "esp_timer.h"
 
 // LED output
 #define PIN_EXCIT_DRIVE   GPIO_NUM_0   //GPIO-00, module pin 3
@@ -30,7 +22,11 @@ unsigned long int photonic_test(void);       // test method for ADC
 #define ADC_CHANNEL       ADC_CHANNEL_2     // ADC channel for GPIO2
 #define TPT_ADC_ATTEN     ADC_ATTEN_DB_12   // 0-3.1V range (adjust as needed)
 
-#define SAMPLES_PER_PHASE 2  // how many A/D samples to take each 1/2 cycle.
+// Data acquisition parameters
+#define SAMPLES_PER_PHASE 3  // how many A/D samples to take each 1/2 cycle.
+                            // (cant change this without changing ISR state machine.)
+#define SENSING_CYCLES_NUM    200 // number of excitation ON+OFF cycles per measurment
+
 
 // Timer Configuration
 //   (claude.ai)
@@ -38,6 +34,13 @@ unsigned long int photonic_test(void);       // test method for ADC
 #define TIMER_GROUP          TIMER_GROUP_0
 #define TIMER_IDX            TIMER_0
 
+// Timer ISR state machine states
+typedef enum {
+    STATE_GPIO_TOGGLE,
+    STATE_SAMPLE_1,
+    STATE_SAMPLE_2,
+    STATE_SAMPLE_3,
+} timer_state_t;
 
 //  Compute timer config
 // For 200 Hz square wave
@@ -49,8 +52,44 @@ unsigned long int photonic_test(void);       // test method for ADC
 #define PHASE_DURATION_US    TIMER_RESOLUTION_HZ / (2*SQUARE_WAVE_FREQ_HZ)   // e.g. 1/2 cycle
 #define SAMPLE_DELAY_US      PHASE_DURATION_US/2     // Wait 1/4 cycle before starting samples
 #define INTER_SAMPLE_US      100      // 100µs between samples
+#define DAQ_DURATION    0.5 // sec  How long will we collect data for
 
-// Detection parameters
-#define N_AD_PER_HALF        3  // how many ADC samples per 1/2 cycle
+
+// Data Buffer Storage
+//
+#define PHOTO_DATA_BUF_SIZE   600 // 2*SAMPLES_PER_PHASE * DAQ_DURATION * SQUARE_WAVE_FREQ_HZ
+
+static volatile uint16_t  data_buffer[PHOTO_DATA_BUF_SIZE];  // where data will be stored
+static volatile uint16_t *data_ptr = data_buffer;   // pointer for async writing/reading buff.
+
+static volatile uint8_t phase_buffer[PHOTO_DATA_BUF_SIZE];  // where phase tag will be stored
+static volatile uint8_t *phase_ptr = phase_buffer;   // pointer for async writing/reading buff.
+// each data value will be tagged as taken from the "excitation-on" phase,
+// or the "excitation-off" phase.
+#define EXCITATION_ON   1
+#define EXCITATION_OFF  0
+
+
+// declarations
+esp_err_t init_photonics(void);  // initialize photonic_task
+void photonic_task(void*);     // generate Ex signal and collect data
+unsigned long int collect_PD_ADC(int);       // get an ADC reading from the PD amp.
+unsigned long int photonic_test(void);       // test method for ADC
+
+// pin assignments for photonics
+
+
+// globals
+static volatile uint32_t sensing_cycle_count = 0;
+uint64_t next_alarm_count=1000;  // set to some value to avoid warning
+uint8_t  phase = EXCITATION_OFF;
+
+// Globals for ISR
+static gptimer_handle_t gptimer = NULL;
+static volatile timer_state_t isr_state = STATE_GPIO_TOGGLE;
+static volatile uint8_t gpio_level = 0;
+
+static volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
+static volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
 
 #endif  // prevent double includes
