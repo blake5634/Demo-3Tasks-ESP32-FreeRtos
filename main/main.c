@@ -23,7 +23,7 @@
 #include "LCD_task.h"
 #include "unistd.h"
 #include "timer_Photo.h"
-#include "menu_task.h"
+#include "state_machine.h"
 
 
 //
@@ -56,8 +56,8 @@
 #define LCD_TASK            TASK_OFF
 
 // PHOTONIC TASK now timer driven
-#define MENU_TASK           TASK_OFF
-#define PHOTONIC_TASK       TASK_ON
+#define STATE_MACHINE       TASK_ON
+#define PHOTONIC_TASK       TASK_OFF
 #define HELLO_WORLD_TASK    TASK_ON
 #define PHOTONICS_TEST      TASK_OFF
 #define CPU_LOAD_TASK       TASK_ON
@@ -86,10 +86,10 @@ static void hello_task(void *arg);
 //   BH defines
 #define DEFAULT_STACK  4096
 #define BLINK_PERIOD    300 //ms
-#define BLINK_GPIO 8
+#define BLINK_GPIO      8
 #define LED_BIT_ON      (uint8_t) 1
 #define LED_BIT_OFF     (uint8_t) 0
-#define IDLE_GPIO       20    // PC bd Test Point TP33
+#define IDLE_GPIO       18    // PC bd Test Point TP35
 
 
 // Configure LED task
@@ -146,7 +146,7 @@ static void cpu_load_task(void*)
 {
     while(1){
         setLedFromArg(LED_BIT_OFF); // turn   LED (indicate idle)
-        gpio_set_level(IDLE_GPIO, 1);  // Test point 33 on V02board
+        gpio_set_level(IDLE_GPIO, 1);  // Test point  V02board
         vTaskDelay(1);
         }
 }
@@ -280,16 +280,58 @@ static void hello_task(void *arg)
 void app_main(void)
 {
     /*
-     * Validate task config
+     * TEMP TEST
+
+
+    printf("\n=== Testing GPIO 20 ===\n");
+
+    // 1. Reset to known state
+    gpio_reset_pin(END_PAUSE_INPUT);
+    printf("1. After reset: %d\n", gpio_get_level(END_PAUSE_INPUT));
+
+    // 2. Configure as input with pull-up
+    gpio_set_direction(END_PAUSE_INPUT, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(END_PAUSE_INPUT, GPIO_PULLUP_ONLY);
+    vTaskDelay(pdMS_TO_TICKS(50));
+    printf("2. With pull-up: %d (expect 1)\n", gpio_get_level(END_PAUSE_INPUT));
+
+    // 3. Try pull-down to confirm pin is responsive
+    gpio_set_pull_mode(END_PAUSE_INPUT, GPIO_PULLDOWN_ONLY);
+    vTaskDelay(pdMS_TO_TICKS(50));
+    printf("3. With pull-down: %d (expect 0)\n", gpio_get_level(END_PAUSE_INPUT));
+
+    // 4. Back to pull-up
+    gpio_set_pull_mode(END_PAUSE_INPUT, GPIO_PULLUP_ONLY);
+    vTaskDelay(pdMS_TO_TICKS(50));
+    printf("4. Back to pull-up: %d (expect 1)\n", gpio_get_level(END_PAUSE_INPUT));
+
+    // 5. Test with floating (no pull)
+    gpio_set_pull_mode(END_PAUSE_INPUT, GPIO_FLOATING);
+    vTaskDelay(pdMS_TO_TICKS(50));
+    printf("5. Floating: %d (unpredictable)\n", gpio_get_level(END_PAUSE_INPUT));
+
+    printf("=== Test Complete ===\n\n");
+
+    */
+
+
+
+
+    /*
+     * Validate task configuration constraints
      */
     if (CPU_LOAD_TASK == TASK_ON && LED_TASK == TASK_OFF){
         ESP_LOGI(TAG,"Error:  LED_TASK must be ON for CPU_LOAD_TASK.");
+        handle_error("Stopping.");
+        }
+    if (STATE_MACHINE == TASK_ON && PHOTONIC_TASK == TASK_ON){
+        ESP_LOGI(TAG,"Error:  PHOTONI_TASK must be OFF for STATE_MACHINE.");
         handle_error("Stopping.");
     }
 
 
 
-    /*
+    /***************************************************************
      *
      * Hardware and Software setups and INITIALIZATIONS
      *
@@ -305,19 +347,24 @@ void app_main(void)
         LCD_reset(SLAVE_ADDRESS1_LCD);
         // LCD_reset(SLAVE_ADDRESS2_LCD);
         ESP_LOGI(TAG, "LCD device init completed ");
-    }
+        }
 
     // config hardware GPIO pins for on-board LED (board-specific)
     if (LED_TASK == TASK_ON) {
         configure_led();   // defined above for two configs
         ESP_LOGI(TAG, "on-board LED hardware has been configured.");
-    }
+        }
+
+    if (STATE_MACHINE==TASK_ON){
+        state_machine_init();
+        ESP_LOGI(TAG, "State Machine has been set up.");
+        }
 
     if (PHOTONIC_TASK == TASK_ON || PHOTONICS_TEST==TASK_ON) {
         // setup for photonics board interface.
         init_photonics();
         ESP_LOGI(TAG, "photonics pinouts have been set");
-    }
+        }
 
     if (CPU_LOAD_TASK == TASK_ON){
         configure_led();   // defined above for two configs
@@ -336,10 +383,11 @@ void app_main(void)
 
     ESP_LOGI(TAG, "\n\n      Starting task(s)...\n\n");
 
-    if (MENU_TASK==TASK_ON){
-        xTaskCreatePinnedToCore(menu_task, "Menu Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
-        ESP_LOGI(TAG, "Menu Task Created");
-    }
+
+    if (STATE_MACHINE==TASK_ON){
+         xTaskCreatePinnedToCore(state_machine_task, "State Machine Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+        ESP_LOGI(TAG, "State Machine Task Created");
+        }
 
     if (HELLO_WORLD_TASK==TASK_ON) {
     /*

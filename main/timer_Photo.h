@@ -15,8 +15,8 @@ unsigned long int photonic_test(void);       // test method for ADC
 // pin assignments for photonics
 
 // LED output
-#define PIN_EXCIT_DRIVE   GPIO_NUM_0   //GPIO-00, module pin 4
-#define OUTPUT_GPIO    PIN_EXCIT_DRIVE
+#define PIN_EXCIT_DRIVE   GPIO_NUM_0   //GPIO-00, module pin 3
+#define OUTPUT_GPIO       PIN_EXCIT_DRIVE
 
 // ADC parameters:
 
@@ -26,10 +26,11 @@ unsigned long int photonic_test(void);       // test method for ADC
 // ADC_ATTEN_DB_6      // 6 dB attenuation, range: 0 - ~1300 mV
 // ADC_ATTEN_DB_12     // 12 dB attenuation, range: 0 - ~3100 mV
 
-#define TPT_PIN_ADC_PD    GPIO_NUM_2        //GPIO-2, module pin 6
+#define TPT_PIN_ADC_PD    GPIO_NUM_2        //GPIO-2, module pin 5
 #define ADC_CHANNEL       ADC_CHANNEL_2     // ADC channel for GPIO2
 #define TPT_ADC_ATTEN     ADC_ATTEN_DB_12   // 0-3.1V range (adjust as needed)
 
+#define SAMPLES_PER_PHASE 2  // how many A/D samples to take each 1/2 cycle.
 
 // Timer Configuration
 //   (claude.ai)
@@ -49,10 +50,7 @@ unsigned long int photonic_test(void);       // test method for ADC
 #define SAMPLE_DELAY_US      PHASE_DURATION_US/2     // Wait 1/4 cycle before starting samples
 #define INTER_SAMPLE_US      100      // 100µs between samples
 
-// Excitation parameters
-#define N_CYCLES             3  //number of cycles before result
-
 // Detection parameters
-#define N_AD_PER_HALF         2  // how many ADC samples per 1/2 cycle
+#define N_AD_PER_HALF        3  // how many ADC samples per 1/2 cycle
 
 #endif  // prevent double includes

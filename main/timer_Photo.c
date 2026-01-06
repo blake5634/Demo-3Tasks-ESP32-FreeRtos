@@ -34,6 +34,9 @@
 static bool timer_isr_callback(gptimer_handle_t timer,
                                const gptimer_alarm_event_data_t *edata,
                                void *user_ctx);
+
+static void start_timer(gptimer_handle_t);
+
 // my ADC function
 uint16_t read_adc(void);
 
@@ -43,7 +46,7 @@ static void get_latest_samples(uint16_t*, uint16_t*);
 // Spinlock for protecting sample data
 static portMUX_TYPE samples_mux = portMUX_INITIALIZER_UNLOCKED;
 
-// State machine states
+// ISR state machine states
 typedef enum {
     STATE_GPIO_TOGGLE,
     STATE_SAMPLE_1,
@@ -51,14 +54,13 @@ typedef enum {
     STATE_SAMPLE_3,
 } timer_state_t;
 
-// Globals
+// Globals for ISR
 static gptimer_handle_t gptimer = NULL;
 static volatile timer_state_t isr_state = STATE_GPIO_TOGGLE;
 static volatile uint8_t gpio_level = 0;
-static volatile uint32_t sample_count = 0;
+static volatile uint32_t sensing_cycle_count = 0;
 
 
-#define SAMPLES_PER_PHASE 2
 static volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
 static volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
 
@@ -122,6 +124,13 @@ esp_err_t init_photonics(void) {
 
     ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, NULL));
 
+    start_timer(gptimer);
+
+    return statusCode;
+    }
+
+
+static void start_timer(gptimer_handle_t gptimer){
     // Enable timer
     ESP_ERROR_CHECK(gptimer_enable(gptimer));
 
@@ -130,15 +139,15 @@ esp_err_t init_photonics(void) {
         .alarm_count = 2500,  // 100µs
         .flags.auto_reload_on_alarm = true,
     };
+
     ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
 
     // Start timer
     ESP_ERROR_CHECK(gptimer_start(gptimer));
-
-
-
-    return statusCode;
     }
+
+
+
 
 // ISR is static for fast (in-ram) execution
 //     Claide.ai helped
@@ -191,7 +200,6 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
                 samples_zero[2] = read_adc();
             }
 
-            sample_count++;
 
             // Calculate remaining time until next GPIO toggle
             next_alarm_count = edata->alarm_value +
@@ -200,6 +208,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
             break;
     }
 
+    sensing_cycle_count++;  //  count complete cycles (on+off phases)
     // Set next alarm
     gptimer_alarm_config_t alarm_config = {
         .alarm_count = next_alarm_count,
@@ -213,7 +222,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
     static uint8_t level = 0;
     gpio_set_level(PIN_EXCIT_DRIVE, level);
     level = !level;
-    sample_count++;
+    sensing_cycle_count++;
     // Return whether we need to yield to a higher priority task
 
 
@@ -249,7 +258,7 @@ void photonic_task(void*) {
 
         printf("Run Cycle %d - Positive phase: %d, %d | Zero phase: %d, %d\n",
                 cycleCnt, pos[0], pos[1], low[0], low[1]);
-        ESP_LOGI(TAG, "photonic task is alive: %d/%d",cycleCnt, (int)sample_count);
+        ESP_LOGI(TAG, "photonic task is alive: %d/%d",cycleCnt, (int)sensing_cycle_count);
         vTaskDelay(pdMS_TO_TICKS(1000));
         }
     }
@@ -269,7 +278,7 @@ void get_latest_samples(uint16_t *pos_samples, uint16_t *zero_samples)
 uint16_t read_adc(void){
     int n_readSum = 0;
     n_readSum = collect_PD_ADC(2);
-    return n_readSum >>1;  // average of 2 readings (~22uSec)
+    return n_readSum >> 1;  // average of 2 readings (~22uSec)
     }
 
 

@@ -7,3 +7,5 @@ My software development environment is:
     3 tasks with periods of 1 second,
 
     1 ISR with clock-driven interrupts every 2500 uSec.
+
+    My hardware is ESP32-C6 (waveshare board ESP32-C6-zero)
