@@ -80,9 +80,9 @@ unsigned long int photonic_test(void);       // test method for ADC
 
 
 // globals
-static volatile uint32_t sensing_cycle_count = 0;
-uint64_t next_alarm_count=1000;  // set to some value to avoid warning
-uint8_t  phase = EXCITATION_OFF;
+extern uint32_t sensing_cycle_count;
+extern uint64_t next_alarm_count;
+extern uint8_t  phase;
 
 // Globals for ISR
 static gptimer_handle_t gptimer = NULL;

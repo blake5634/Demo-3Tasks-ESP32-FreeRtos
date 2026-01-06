@@ -49,6 +49,14 @@ static portMUX_TYPE samples_mux = portMUX_INITIALIZER_UNLOCKED;
 // ADC handle
 adc_oneshot_unit_handle_t adc1_handle;
 
+// Globals
+uint32_t sensing_cycle_count = 0;
+uint64_t next_alarm_count=1000;  // set to some value to avoid warning
+uint8_t  phase = EXCITATION_OFF;
+
+
+
+
 esp_err_t init_photonics(void) {
     esp_err_t statusCode = 0; // 0== normal
     //
