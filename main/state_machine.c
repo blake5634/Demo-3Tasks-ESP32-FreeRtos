@@ -15,7 +15,8 @@
 #define TAG "State Machine Task: "
 
 void state_machine_init(){
-    //init_photonics();
+    // sets up timer, ADC ports, excitation outputs
+    init_photonics();
     ESP_LOGI(TAG, "photonics pinouts have been set (via State Machine init.)");
 
     /*
@@ -92,14 +93,16 @@ void state_machine_task(void *pvParameters){
                 data_ptr = data_buffer;
                 phase_ptr = phase_buffer;
                 sensing_cycle_count = 0;
+                isr_state = STATE_GPIO_TOGGLE;
 
                 // Start the isr going for excitation and acquisition
                 // Set next alarm
                 gptimer_alarm_config_t alarm_config = {
-                    .alarm_count = next_alarm_count,
+                    .alarm_count = 2500,   //
                     .flags.auto_reload_on_alarm = false,
                 };
                 gptimer_set_alarm_action(gptimer, &alarm_config);
+                start_timer(gptimer);
 
                 // Wait for ISR to finish up and stop itself
                 vTaskDelay(pdMS_TO_TICKS(1500));

@@ -35,7 +35,6 @@ static bool timer_isr_callback(gptimer_handle_t timer,
                                const gptimer_alarm_event_data_t *edata,
                                void *user_ctx);
 
-static void start_timer(gptimer_handle_t);
 
 // my ADC function
 uint16_t read_adc(void);
@@ -53,8 +52,8 @@ adc_oneshot_unit_handle_t adc1_handle;
 uint32_t sensing_cycle_count = 0;
 uint64_t next_alarm_count=1000;  // set to some value to avoid warning
 uint8_t  phase = EXCITATION_OFF;
-
-
+volatile uint16_t *data_ptr = data_buffer;   // pointer for async writing/reading buff
+volatile uint8_t *phase_ptr = phase_buffer;   // pointer for async writing/reading buff.
 
 
 esp_err_t init_photonics(void) {
@@ -113,13 +112,13 @@ esp_err_t init_photonics(void) {
 
     ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, NULL));
 
-    start_timer(gptimer);
+   // start_timer(gptimer);
 
     return statusCode;
     }
 
 
-static void start_timer(gptimer_handle_t gptimer){
+void start_timer(gptimer_handle_t gptimer){
     // Enable timer
     ESP_ERROR_CHECK(gptimer_enable(gptimer));
 
@@ -145,6 +144,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
                                          void *user_ctx)  {
     switch(isr_state) {
         case STATE_GPIO_TOGGLE:
+            printf("x");
             // Toggle GPIO
             gpio_set_level(OUTPUT_GPIO, gpio_level);
             if(gpio_level) {
