@@ -20,6 +20,7 @@
 #include "timer_Photo.h"
 
 #define TAG "TPT Timer/Photonics Task: "
+#define isrTAG "ISR: "
 
 /*   29-Dec-2025  BH
  *   New approach: use timer-driven ISR to get control of wave frequency
@@ -155,7 +156,6 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
                                          void *user_ctx)  {
     switch(isr_state) {
         case STATE_GPIO_TOGGLE:
-            printf("x");
             // Toggle GPIO
             gpio_set_level(OUTPUT_GPIO, gpio_level);
             if(gpio_level) {
@@ -166,6 +166,8 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
                 }
 
             gpio_level = !gpio_level;
+
+            ESP_EARLY_LOGI(isrTAG, "got here - TOGGLE");
 
             // Schedule first sample in middle of phase
             next_alarm_count = edata->alarm_value + SAMPLE_DELAY_US;
@@ -182,7 +184,6 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
                 *data_ptr= samples_zero[0];
             }
             *phase_ptr = phase;
-
             next_alarm_count = edata->alarm_value + INTER_SAMPLE_US;
             isr_state = STATE_SAMPLE_2;
             data_ptr++;  phase_ptr++;
@@ -237,8 +238,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
     }
     // else - timer does not cause any more interrupts.
     else {
-        ESP_LOGI(TAG, "ISR has completed %d sample acquisition. ", SENSING_CYCLES_NUM);
-    }
+     }
     /*Non-State-Machine version:
      *    // Toggle the GPIO to drive the LED driver wave
     static uint8_t level = 0;
