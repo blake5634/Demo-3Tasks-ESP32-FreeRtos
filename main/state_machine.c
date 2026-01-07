@@ -38,7 +38,7 @@ void state_machine_init(){
 
     // Configure step-by-step (this is what worked in the test)
     gpio_set_direction(END_PAUSE_INPUT, GPIO_MODE_INPUT);
-    gpio_input_enable(END_PAUSE_INPUT);    // ← ADD THIS LINE!
+    // gpio_input_enable(END_PAUSE_INPUT);    // ← ADD THIS LINE!
     gpio_set_pull_mode(END_PAUSE_INPUT, GPIO_PULLUP_ONLY);
 
     // Small delay to let it stabilize

@@ -52,9 +52,20 @@ adc_oneshot_unit_handle_t adc1_handle;
 uint32_t sensing_cycle_count = 0;
 uint64_t next_alarm_count=1000;  // set to some value to avoid warning
 uint8_t  phase = EXCITATION_OFF;
+
+volatile uint16_t  data_buffer[PHOTO_DATA_BUF_SIZE];  // where data will be stored.
+volatile uint8_t  phase_buffer[PHOTO_DATA_BUF_SIZE];  // where phase tag will be stored
+
 volatile uint16_t *data_ptr = data_buffer;   // pointer for async writing/reading buff
 volatile uint8_t *phase_ptr = phase_buffer;   // pointer for async writing/reading buff.
 
+volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
+volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
+
+// Globals for ISR
+gptimer_handle_t gptimer = NULL;
+volatile timer_state_t isr_state = STATE_GPIO_TOGGLE;
+volatile uint8_t gpio_level = 0;
 
 esp_err_t init_photonics(void) {
     esp_err_t statusCode = 0; // 0== normal

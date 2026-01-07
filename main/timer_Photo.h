@@ -61,7 +61,7 @@ typedef enum {
 
 extern volatile uint16_t  data_buffer[PHOTO_DATA_BUF_SIZE];  // where data will be stored.
 
-extern volatile uint8_t phase_buffer[PHOTO_DATA_BUF_SIZE];  // where phase tag will be stored
+extern volatile uint8_t  phase_buffer[PHOTO_DATA_BUF_SIZE];  // where phase tag will be stored
 
 
 
@@ -91,11 +91,11 @@ extern volatile uint16_t *data_ptr; // pointer for async writing/reading buff
 extern volatile uint8_t *phase_ptr; // pointer for async writing/reading buff.
 
 // Globals for ISR
-gptimer_handle_t gptimer = NULL;
-volatile timer_state_t isr_state = STATE_GPIO_TOGGLE;
-volatile uint8_t gpio_level = 0;
+extern gptimer_handle_t gptimer;
+extern volatile timer_state_t isr_state;
+extern volatile uint8_t gpio_level;
 
-volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
-volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
+extern volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
+extern volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
 
 #endif  // prevent double includes
