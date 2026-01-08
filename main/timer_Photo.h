@@ -59,11 +59,11 @@ typedef enum {
 //
 #define PHOTO_DATA_BUF_SIZE   600 // 2*SAMPLES_PER_PHASE * DAQ_DURATION * SQUARE_WAVE_FREQ_HZ
 
-static volatile uint16_t  data_buffer[PHOTO_DATA_BUF_SIZE];  // where data will be stored
-static volatile uint16_t *data_ptr = data_buffer;   // pointer for async writing/reading buff.
+extern volatile uint16_t  data_buffer[PHOTO_DATA_BUF_SIZE];  // where data will be stored
+extern volatile uint16_t *data_ptr;   // pointer for async writing/reading buff.
 
-static volatile uint8_t phase_buffer[PHOTO_DATA_BUF_SIZE];  // where phase tag will be stored
-static volatile uint8_t *phase_ptr = phase_buffer;   // pointer for async writing/reading buff.
+extern volatile uint8_t phase_buffer[PHOTO_DATA_BUF_SIZE];  // where phase tag will be stored
+extern volatile uint8_t *phase_ptr;   // pointer for async writing/reading buff.
 // each data value will be tagged as taken from the "excitation-on" phase,
 // or the "excitation-off" phase.
 #define EXCITATION_ON   1
@@ -85,11 +85,11 @@ extern uint64_t next_alarm_count;
 extern uint8_t  phase;
 
 // Globals for ISR
-static gptimer_handle_t gptimer = NULL;
-static volatile timer_state_t isr_state = STATE_GPIO_TOGGLE;
-static volatile uint8_t gpio_level = 0;
+extern gptimer_handle_t gptimer;
+extern volatile timer_state_t isr_state;
+extern volatile uint8_t gpio_level;
 
-static volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
-static volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
+extern volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
+extern volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
 
 #endif  // prevent double includes
