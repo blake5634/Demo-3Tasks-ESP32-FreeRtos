@@ -72,11 +72,6 @@ volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
 volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
 volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
 
-// Globals for ISR
-gptimer_handle_t gptimer = NULL;
-volatile timer_state_t isr_state = STATE_GPIO_TOGGLE;
-volatile uint8_t gpio_level = 0;
-
 esp_err_t init_photonics(void) {
     esp_err_t statusCode = 0; // 0== normal
     //
