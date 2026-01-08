@@ -54,11 +54,20 @@ uint32_t sensing_cycle_count = 0;
 uint64_t next_alarm_count=1000;  // set to some value to avoid warning
 uint8_t  phase = EXCITATION_OFF;
 
-volatile uint16_t  data_buffer[PHOTO_DATA_BUF_SIZE];  // where data will be stored.
-volatile uint8_t  phase_buffer[PHOTO_DATA_BUF_SIZE];  // where phase tag will be stored
+volatile uint16_t  data_buffer[PHOTO_DATA_BUF_SIZE]={0xFFFF};  // where data will be stored
+volatile uint16_t *data_ptr = data_buffer;   // pointer for async writing/reading buff.
 
-volatile uint16_t *data_ptr = data_buffer;   // pointer for async writing/reading buff
+volatile uint8_t phase_buffer[PHOTO_DATA_BUF_SIZE]={0xFF};  // where phase tag will be stored
 volatile uint8_t *phase_ptr = phase_buffer;   // pointer for async writing/reading buff.
+
+
+// Globals for ISR
+gptimer_handle_t gptimer = NULL;
+volatile timer_state_t isr_state = STATE_GPIO_TOGGLE;
+volatile uint8_t gpio_level = 0;
+
+volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
+volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
 
 volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
 volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
@@ -154,6 +163,9 @@ void start_timer(gptimer_handle_t gptimer){
 static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
                                          const gptimer_alarm_event_data_t *edata,
                                          void *user_ctx)  {
+
+    int idx=0;
+    uint16_t tmp=0;
     switch(isr_state) {
         case STATE_GPIO_TOGGLE:
             // Toggle GPIO
@@ -176,27 +188,34 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
 
         case STATE_SAMPLE_1:
             // Take first A/D sample
+            idx=0;
             if (gpio_level == 1) {
-                samples_positive[0] = read_adc();
-                *data_ptr = samples_positive[0];
+                tmp = read_adc();
+                *data_ptr = tmp;
+                samples_positive[idx]=tmp;
             } else {
-                samples_zero[0] = read_adc();
-                *data_ptr= samples_zero[0];
+                tmp = read_adc();
+                *data_ptr= tmp;
+                samples_zero[idx]=tmp;
             }
             *phase_ptr = phase;
             next_alarm_count = edata->alarm_value + INTER_SAMPLE_US;
             isr_state = STATE_SAMPLE_2;
-            data_ptr++;  phase_ptr++;
+            data_ptr++;
+            phase_ptr++;
             break;
 
         case STATE_SAMPLE_2:
             // Take second A/D sample
+            idx=1;
             if (gpio_level == 1) {
-                samples_positive[1] = read_adc();
-                *data_ptr = samples_positive[1];
+                tmp = read_adc();
+                *data_ptr = tmp;
+                samples_positive[idx]=tmp;
             } else {
-                samples_zero[1] = read_adc();
-                *data_ptr = samples_zero[1];
+                tmp = read_adc();
+                *data_ptr= tmp;
+                samples_zero[idx]=tmp;
             }
             *phase_ptr = phase;
 
@@ -207,12 +226,15 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
 
         case STATE_SAMPLE_3:
             // Take third A/D sample
+            idx=2;
             if (gpio_level == 1) {
-                samples_positive[2] = read_adc();
-                *data_ptr = samples_positive[2];
+                tmp = read_adc();
+                *data_ptr = tmp;
+                samples_positive[idx]=tmp;
             } else {
-                samples_zero[2] = read_adc();
-                *data_ptr = samples_zero[2];
+                tmp = read_adc();
+                *data_ptr= tmp;
+                samples_zero[idx]=tmp;
             }
             *phase_ptr = phase;
 

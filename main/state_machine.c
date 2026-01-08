@@ -111,7 +111,32 @@ void state_machine_task(void *pvParameters){
             }
             case SM_State_Uploading:{
                 ESP_LOGI(TAG, "*****SM_State_Uploading");
-                vTaskDelay(pdMS_TO_TICKS(2000));
+                // transfer data, format it, and print it as .csv
+                printf("\n\n          Download .csv   \n\n");
+                printf("tag, value\n");
+                int j = 0;
+                int value = 0;
+                char tag[10];
+                data_ptr = data_buffer;
+                phase_ptr = phase_buffer;
+                // while(j < PHOTO_DATA_BUF_SIZE){
+    #define DEBUG_SIZE  20
+                while(j < DEBUG_SIZE){
+                    if (*phase_ptr == EXCITATION_OFF){
+                        strcpy(tag,"off");
+                    }
+                    else
+                        strcpy(tag,"on");
+                    value = (int) *data_ptr;
+                    printf("%s, %d\n",tag,value);
+                    j++;
+                    data_ptr++;
+                    phase_ptr++;
+                    // ESP_LOGI(TAG, "sample %d: %d ",j, (int) data_ptr);
+                    vTaskDelay(2); // ticks
+                }
+                printf("\n\n          End of .csv   \n\n");
+                vTaskDelay(pdMS_TO_TICKS(50));
                 state = SM_State_Paused;
                 break;
             }

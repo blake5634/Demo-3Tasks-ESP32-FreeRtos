@@ -59,11 +59,11 @@ typedef enum {
 //
 #define PHOTO_DATA_BUF_SIZE   600 // 2*SAMPLES_PER_PHASE * DAQ_DURATION * SQUARE_WAVE_FREQ_HZ
 
-extern volatile uint16_t  data_buffer[PHOTO_DATA_BUF_SIZE];  // where data will be stored.
+extern volatile uint16_t  data_buffer[PHOTO_DATA_BUF_SIZE];  // where data will be stored
+extern volatile uint16_t *data_ptr;   // pointer for async writing/reading buff.
 
-extern volatile uint8_t  phase_buffer[PHOTO_DATA_BUF_SIZE];  // where phase tag will be stored
-
-
+extern volatile uint8_t phase_buffer[PHOTO_DATA_BUF_SIZE];  // where phase tag will be stored
+extern volatile uint8_t *phase_ptr;   // pointer for async writing/reading buff.
 
 // each data value will be tagged as taken from the "excitation-on" phase,
 // or the "excitation-off" phase.
@@ -86,9 +86,6 @@ void start_timer(gptimer_handle_t);
 extern uint32_t sensing_cycle_count;
 extern uint64_t next_alarm_count;
 extern uint8_t  phase;
-
-extern volatile uint16_t *data_ptr; // pointer for async writing/reading buff
-extern volatile uint8_t *phase_ptr; // pointer for async writing/reading buff.
 
 // Globals for ISR
 extern gptimer_handle_t gptimer;
