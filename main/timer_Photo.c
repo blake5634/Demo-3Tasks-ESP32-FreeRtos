@@ -176,7 +176,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
 
             gpio_level = !gpio_level;
 
-            ESP_EARLY_LOGI(isrTAG, "got here - TOGGLE");
+            // ESP_EARLY_LOGI(isrTAG, "got here - TOGGLE");
 
             // Schedule first sample in middle of phase
             next_alarm_count = edata->alarm_value + SAMPLE_DELAY_US;

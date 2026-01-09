@@ -112,7 +112,7 @@ void state_machine_task(void *pvParameters){
             case SM_State_Uploading:{
                 ESP_LOGI(TAG, "*****SM_State_Uploading");
                 // transfer data, format it, and print it as .csv
-                printf("\n\n          Download .csv   \n\n");
+                printf("\n\n   >>>START_LOG<<<       Download .csv\n");
                 printf("tag, value\n");
                 int j = 0;
                 int value = 0;
@@ -135,7 +135,7 @@ void state_machine_task(void *pvParameters){
                     // ESP_LOGI(TAG, "sample %d: %d ",j, (int) data_ptr);
                     vTaskDelay(2); // ticks
                 }
-                printf("\n\n          End of .csv   \n\n");
+                printf(">>>END_LOG<<<      End of .csv   \n\n");
                 vTaskDelay(pdMS_TO_TICKS(50));
                 state = SM_State_Paused;
                 break;
