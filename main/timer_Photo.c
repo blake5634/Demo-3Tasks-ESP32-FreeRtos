@@ -54,6 +54,7 @@ uint32_t sensing_cycle_count = 0;
 uint64_t next_alarm_count=1000;  // set to some value to avoid warning
 uint8_t  phase = EXCITATION_OFF;
 
+// data buffers to transfer batch of samples to the state_machine task.
 volatile uint16_t  data_buffer[PHOTO_DATA_BUF_SIZE]={0xFFFF};  // where data will be stored
 volatile uint16_t *data_ptr = data_buffer;   // pointer for async writing/reading buff.
 
@@ -152,13 +153,14 @@ void start_timer(gptimer_handle_t gptimer){
 
 
 
-
-// ISR is static for fast (in-ram) execution
-//     Claide.ai helped
+/************************************************************************   ISR
+ *
+ *  ISR is static for fast (in-ram) execution
+ *     Claide.ai helped
+ */
 static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
                                          const gptimer_alarm_event_data_t *edata,
                                          void *user_ctx)  {
-
     int idx=0;
     uint16_t tmp=0;
     switch(isr_state) {
@@ -245,7 +247,8 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
             break;
     }
 
-    if (sensing_cycle_count< SENSING_CYCLES_NUM){
+    // if (sensing_cycle_count< SENSING_CYCLES_NUM){
+    if (sensing_cycle_count < 20){  //  simpler testing
         // Set next alarm
         gptimer_alarm_config_t alarm_config = {
             .alarm_count = next_alarm_count,
@@ -254,25 +257,6 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
         gptimer_set_alarm_action(timer, &alarm_config);
     }
     // else - timer does not cause any more interrupts.
-    else {
-     }
-    /*Non-State-Machine version:
-     *    // Toggle the GPIO to drive the LED driver wave
-    static uint8_t level = 0;
-    gpio_set_level(PIN_EXCIT_DRIVE, level);
-    level = !level;
-    sensing_cycle_count++;
-    // Return whether we need to yield to a higher priority task
-
-
-    next_alarm_count = 1000;
-    // Set next alarm
-    gptimer_alarm_config_t alarm_config = {
-        .alarm_count = next_alarm_count,
-        .flags.auto_reload_on_alarm = false,
-    };
-    gptimer_set_alarm_action(timer, &alarm_config);
-    */
 
     return false;// return to interrupted task (true = switch to highest prio task)
    }

@@ -55,7 +55,7 @@ void state_machine_init(){
 }
 
 /*
-// State Machine Task  states
+// State Machine Task  states (for reference, see state_machine.h)
 typedef enum {
     SM_State_Paused,
     SM_State_Acquiring,
@@ -73,7 +73,7 @@ void state_machine_task(void *pvParameters){
         int bit=1;
         ESP_LOGI(TAG, "StateMachine woke up.");
         bit = gpio_get_level(END_PAUSE_INPUT);
-        ESP_LOGI(TAG, "current button input... (%d)",bit);
+        // ESP_LOGI(TAG, "current button input... (%d)",bit);
         switch(state) {
             case SM_State_Paused:{
             int j=0;
@@ -81,8 +81,8 @@ void state_machine_task(void *pvParameters){
                 // wait for user input via pushbutton
                 while ((bit = gpio_get_level(END_PAUSE_INPUT)) == FLOATING_PIN){
                     vTaskDelay(pdMS_TO_TICKS(10));
-                    if ((j++)%100 == 0)
-                        ESP_LOGI(TAG, "waiting for button input... (%d)",bit);
+                    // if ((j++)%100 == 0)
+                        // ESP_LOGI(TAG, "waiting for button input... (%d)",bit);
                     }
                 state = SM_State_Acquiring;
                 break;
@@ -93,7 +93,7 @@ void state_machine_task(void *pvParameters){
                 data_ptr = data_buffer;
                 phase_ptr = phase_buffer;
                 sensing_cycle_count = 0;
-                isr_state = STATE_GPIO_TOGGLE;
+                isr_state = STATE_GPIO_TOGGLE;  //set where ISR will start
 
                 // Start the isr going for excitation and acquisition
                 // Set next alarm
