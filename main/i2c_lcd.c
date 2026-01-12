@@ -42,7 +42,7 @@ void lcd_send_cmd(uint8_t lcd_addr, char cmd)
 {
     char data_u, data_l;
     uint8_t data_t[4];
-    ESP_LOGI(TAG, "LCD send_cmd addr: 0x%x  data: 0x%x", lcd_addr, cmd);
+    // ESP_LOGI(TAG, "LCD send_cmd addr: 0x%x  data: 0x%x", lcd_addr, cmd);
 
     data_u = (cmd & 0xf0); // Upper nibble of the command
     data_l = ((cmd << 4) & 0xf0); // Lower nibble of the command
