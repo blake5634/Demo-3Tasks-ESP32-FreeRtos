@@ -22,10 +22,6 @@
 #define ADC_CHANNEL       ADC_CHANNEL_2     // ADC channel for GPIO2
 #define TPT_ADC_ATTEN     ADC_ATTEN_DB_12   // 0-3.1V range (adjust as needed)
 
-// Data acquisition parameters
-#define SAMPLES_PER_PHASE 3  // how many A/D samples to take each 1/2 cycle.
-                            // (cant change this without changing ISR state machine.)
-#define SENSING_CYCLES_NUM    200 // number of excitation ON+OFF cycles per measurment
 
 
 // Timer Configuration
@@ -48,11 +44,15 @@ typedef enum {
 #define TIMER_RESOLUTION_HZ  1000000  // 1MHz = 1µs resolution
 // TIMER_BASE_CLK is 80 MHz for ESP32
 
-// Timing definitions (in microseconds)
+
+// Data acquisition parameters
+#define SAMPLES_PER_PHASE 3  // how many A/D samples to take each 1/2 cycle.
+                            // (cant change this without changing ISR state machine.)
+#define DAQ_DURATION          0.5 // sec  How long will we collect data for
+#define SENSING_CYCLES_NUM    100 // number of excitation ON+OFF cycles per measurement
 #define PHASE_DURATION_US    TIMER_RESOLUTION_HZ / (2*SQUARE_WAVE_FREQ_HZ)   // e.g. 1/2 cycle
 #define SAMPLE_DELAY_US      PHASE_DURATION_US/2     // Wait 1/4 cycle before starting samples
 #define INTER_SAMPLE_US      100      // 100µs between samples
-#define DAQ_DURATION    0.5 // sec  How long will we collect data for
 
 
 // Data Buffer Storage

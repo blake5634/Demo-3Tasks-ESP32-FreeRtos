@@ -158,7 +158,8 @@ def main():
         os.close(master)
         process.terminate()
         process.wait()
-        debug_log.close()
+        if DEBUG:
+            debug_log.close()
 
 if __name__ == "__main__":
     main()

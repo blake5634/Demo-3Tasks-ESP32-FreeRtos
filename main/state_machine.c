@@ -38,7 +38,6 @@ void state_machine_init(){
 
     // Configure step-by-step (this is what worked in the test)
     gpio_set_direction(END_PAUSE_INPUT, GPIO_MODE_INPUT);
-    // gpio_input_enable(END_PAUSE_INPUT);    // ← ADD THIS LINE!
     gpio_set_pull_mode(END_PAUSE_INPUT, GPIO_PULLUP_ONLY);
 
     // Small delay to let it stabilize
@@ -76,7 +75,6 @@ void state_machine_task(void *pvParameters){
         // ESP_LOGI(TAG, "current button input... (%d)",bit);
         switch(state) {
             case SM_State_Paused:{
-            int j=0;
                 ESP_LOGI(TAG, "*****SM_State_Paused");
                 // wait for user input via pushbutton
                 while ((bit = gpio_get_level(END_PAUSE_INPUT)) == FLOATING_PIN){
@@ -119,9 +117,9 @@ void state_machine_task(void *pvParameters){
                 char tag[10];
                 data_ptr = data_buffer;
                 phase_ptr = phase_buffer;
-                // while(j < PHOTO_DATA_BUF_SIZE){
-    #define DEBUG_SIZE  20
-                while(j < DEBUG_SIZE){
+                while(j < PHOTO_DATA_BUF_SIZE){
+    // #define DEBUG_SIZE  20
+                // while(j < DEBUG_SIZE){
                     if (*phase_ptr == EXCITATION_OFF){
                         strcpy(tag,"off");
                     }

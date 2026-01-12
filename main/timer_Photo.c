@@ -247,8 +247,8 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
             break;
     }
 
-    // if (sensing_cycle_count< SENSING_CYCLES_NUM){
-    if (sensing_cycle_count < 20){  //  simpler testing
+    if (sensing_cycle_count< SENSING_CYCLES_NUM){
+    // if (sensing_cycle_count < 20){  //  simpler testing
         // Set next alarm
         gptimer_alarm_config_t alarm_config = {
             .alarm_count = next_alarm_count,

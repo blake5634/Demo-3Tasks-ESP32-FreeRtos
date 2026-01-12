@@ -113,6 +113,9 @@ void LCD_task1(void* argptr) {
     }
 }
 
+/*
+ *  LCD2 no longer supported
+ *
 void LCD_task2(void* argptr) {
     uint8_t lcd_addr = *((uint8_t *)argptr);
     uint8_t lcda = check_lcd_addr(lcd_addr,"LCD task2 startup");
@@ -134,6 +137,7 @@ void LCD_task2(void* argptr) {
         vTaskDelay(pdMS_TO_TICKS(1000)); 
     }
 }
+ */
 
 #elif   CONFIG_DRIVE_LCD_NO
 #define LCD_tasks_TAG  "NO LCD_16x2_task"

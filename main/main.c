@@ -54,13 +54,11 @@
 
 #define LED_TASK            TASK_ON
 #define LCD_TASK            TASK_OFF
-
-// PHOTONIC TASK now timer driven
-#define STATE_MACHINE       TASK_ON
+#define STATE_MACHINE       TASK_ON     // PHOTONIC TASK now timer driven by this
 #define PHOTONIC_TASK       TASK_OFF
-#define HELLO_WORLD_TASK    TASK_ON
+#define HELLO_WORLD_TASK    TASK_OFF
 #define PHOTONICS_TEST      TASK_OFF
-#define CPU_LOAD_TASK       TASK_ON
+#define CPU_LOAD_TASK       TASK_OFF
 
 
 // LED Task related functions (in this file)
@@ -279,42 +277,6 @@ static void hello_task(void *arg)
 
 void app_main(void)
 {
-    /*
-     * TEMP TEST
-
-
-    printf("\n=== Testing GPIO 20 ===\n");
-
-    // 1. Reset to known state
-    gpio_reset_pin(END_PAUSE_INPUT);
-    printf("1. After reset: %d\n", gpio_get_level(END_PAUSE_INPUT));
-
-    // 2. Configure as input with pull-up
-    gpio_set_direction(END_PAUSE_INPUT, GPIO_MODE_INPUT);
-    gpio_set_pull_mode(END_PAUSE_INPUT, GPIO_PULLUP_ONLY);
-    vTaskDelay(pdMS_TO_TICKS(50));
-    printf("2. With pull-up: %d (expect 1)\n", gpio_get_level(END_PAUSE_INPUT));
-
-    // 3. Try pull-down to confirm pin is responsive
-    gpio_set_pull_mode(END_PAUSE_INPUT, GPIO_PULLDOWN_ONLY);
-    vTaskDelay(pdMS_TO_TICKS(50));
-    printf("3. With pull-down: %d (expect 0)\n", gpio_get_level(END_PAUSE_INPUT));
-
-    // 4. Back to pull-up
-    gpio_set_pull_mode(END_PAUSE_INPUT, GPIO_PULLUP_ONLY);
-    vTaskDelay(pdMS_TO_TICKS(50));
-    printf("4. Back to pull-up: %d (expect 1)\n", gpio_get_level(END_PAUSE_INPUT));
-
-    // 5. Test with floating (no pull)
-    gpio_set_pull_mode(END_PAUSE_INPUT, GPIO_FLOATING);
-    vTaskDelay(pdMS_TO_TICKS(50));
-    printf("5. Floating: %d (unpredictable)\n", gpio_get_level(END_PAUSE_INPUT));
-
-    printf("=== Test Complete ===\n\n");
-
-    */
-
-
 
 
     /*
@@ -325,7 +287,7 @@ void app_main(void)
         handle_error("Stopping.");
         }
     if (STATE_MACHINE == TASK_ON && PHOTONIC_TASK == TASK_ON){
-        ESP_LOGI(TAG,"Error:  PHOTONI_TASK must be OFF for STATE_MACHINE.");
+        ESP_LOGI(TAG,"Error:  PHOTONIC_TASK must be OFF for STATE_MACHINE.");
         handle_error("Stopping.");
     }
 
