@@ -65,11 +65,11 @@ volatile uint8_t *phase_ptr = phase_buffer;   // pointer for async writing/readi
 // Globals for ISR
 gptimer_handle_t gptimer = NULL;
 volatile timer_state_t isr_state = STATE_GPIO_TOGGLE;
-volatile uint8_t gpio_level = 0;
+volatile uint8_t gpio_level = 0; // must have this init value to start with ON pulse
 
+// below are small old buffers for early tests -
 volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
 volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
-
 volatile uint16_t samples_positive[SAMPLES_PER_PHASE];
 volatile uint16_t samples_zero[SAMPLES_PER_PHASE];
 
@@ -166,6 +166,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
     switch(isr_state) {
         case STATE_GPIO_TOGGLE:
             // Toggle GPIO
+            gpio_level = !gpio_level;  // note 1st time through = ON
             gpio_set_level(OUTPUT_GPIO, gpio_level);
             if(gpio_level) {
                 phase = EXCITATION_ON;
@@ -173,8 +174,6 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
             else {
                 phase = EXCITATION_OFF;
                 }
-
-            gpio_level = !gpio_level;
 
             // ESP_EARLY_LOGI(isrTAG, "got here - TOGGLE");
 
@@ -197,9 +196,9 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
             }
             *phase_ptr = phase;
             next_alarm_count = edata->alarm_value + INTER_SAMPLE_US;
-            isr_state = STATE_SAMPLE_2;
             data_ptr++;
             phase_ptr++;
+            isr_state = STATE_SAMPLE_2;
             break;
 
         case STATE_SAMPLE_2:
@@ -217,8 +216,9 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
             *phase_ptr = phase;
 
             next_alarm_count = edata->alarm_value + INTER_SAMPLE_US;
+            data_ptr++;
+            phase_ptr++;
             isr_state = STATE_SAMPLE_3;
-            data_ptr++;  phase_ptr++;
             break;
 
         case STATE_SAMPLE_3:
@@ -243,7 +243,8 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
             if (phase==EXCITATION_OFF){
                 sensing_cycle_count++;  //  count complete cycles (on+off phases)
                 }
-            data_ptr++;  phase_ptr++;
+            data_ptr++;
+            phase_ptr++;
             break;
     }
 

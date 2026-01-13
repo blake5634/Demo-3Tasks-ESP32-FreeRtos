@@ -7,7 +7,7 @@ import sys
 fname = sys.argv[1]
 
 # Read the CSV file
-data = pd.read_csv(fname, names=['state', 'value'], skipinitialspace=True)
+data = pd.read_csv(fname, names=['j', 'state', 'value'], skipinitialspace=True)
 
 
 # Separate on and off states and convert to float

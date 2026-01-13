@@ -57,6 +57,7 @@ typedef enum {
 
 // Data Buffer Storage
 //
+//  Cant do this math in c-preProcessor cmd, just compute it and type it in here
 #define PHOTO_DATA_BUF_SIZE   600 // 2*SAMPLES_PER_PHASE * DAQ_DURATION * SQUARE_WAVE_FREQ_HZ
 
 extern volatile uint16_t  data_buffer[PHOTO_DATA_BUF_SIZE];  // where data will be stored

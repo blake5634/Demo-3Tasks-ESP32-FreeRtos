@@ -117,7 +117,9 @@ void state_machine_task(void *pvParameters){
                 char tag[10];
                 data_ptr = data_buffer;
                 phase_ptr = phase_buffer;
-                while(j < PHOTO_DATA_BUF_SIZE){
+                // int Ndata = PHOTO_DATA_BUF_SIZE-SAMPLES_PER_PHASE; // correcting fencepost prob
+                int Ndata = PHOTO_DATA_BUF_SIZE; // correcting fencepost prob
+                while(j < Ndata){
     // #define DEBUG_SIZE  20
                 // while(j < DEBUG_SIZE){
                     if (*phase_ptr == EXCITATION_OFF){
@@ -126,7 +128,7 @@ void state_machine_task(void *pvParameters){
                     else
                         strcpy(tag,"on");
                     value = (int) *data_ptr;
-                    printf("%s, %d\n",tag,value);
+                    printf("%d, %s, %d\n",j, tag,value);
                     j++;
                     data_ptr++;
                     phase_ptr++;

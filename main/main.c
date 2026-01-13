@@ -53,7 +53,7 @@
 #define TASK_OFF             0
 
 #define LED_TASK            TASK_ON
-#define LCD_TASK            TASK_ON
+#define LCD_TASK            TASK_OFF
 #define STATE_MACHINE       TASK_ON     // PHOTONIC TASK now timer driven by this
 #define PHOTONIC_TASK       TASK_OFF
 #define HELLO_WORLD_TASK    TASK_OFF
