@@ -62,7 +62,7 @@ void LCD_reset(uint8_t lcd_addr) {
     uint8_t lcda = check_lcd_addr(lcd_addr, "LCD_reset()");
     if (xSemaphoreTake(i2cMutex, portMAX_DELAY) == pdTRUE) {
         printf("LCD_reset: Starting: 0x%x\n", lcd_addr);
-        
+
         lcd_init(lcda);             // Initialize the LCD
         usleep(d100ms);
 
@@ -72,6 +72,45 @@ void LCD_reset(uint8_t lcd_addr) {
         xSemaphoreGive(i2cMutex);
         usleep(d100ms);
         vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+
+void lcd_task_3(void* argptr){
+    uint8_t lcd_addr = *((uint8_t *)argptr);
+    uint8_t lcda = check_lcd_addr(lcd_addr,"LCD_task1 startup");
+    lcd_message_t msg;
+
+    while (1) {
+        // Wait for message (blocks until message arrives)
+        if (xQueueReceive(lcdQueue, &msg, portMAX_DELAY) == pdTRUE) {
+            if (xSemaphoreTake(i2cMutex, portMAX_DELAY) == pdTRUE) {
+                lcd_put_cursor(lcda, msg.row, msg.col);
+                lcd_send_string(lcda, msg.text);
+                xSemaphoreGive(i2cMutex);
+            }
+        }
+    }}
+
+/*
+    * a simple task to test LCD every x seconds
+    */
+void lcd_task_3a(void* argptr){
+    lcd_message_t msg;
+    int counter = 0;
+
+    while (1) {
+        // Prepare message
+        msg.row = 1;
+        msg.col = 0;
+        snprintf(msg.text, sizeof(msg.text), "N: %04d", counter++);
+
+        // Send to LCD task (non-blocking with timeout)
+        if (xQueueSend(lcdQueue, &msg, pdMS_TO_TICKS(100)) != pdTRUE) {
+            ESP_LOGW("TASK", "LCD queue full!");
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(3000));
     }
 }
 
@@ -120,7 +159,7 @@ void LCD_task2(void* argptr) {
     uint8_t lcd_addr = *((uint8_t *)argptr);
     uint8_t lcda = check_lcd_addr(lcd_addr,"LCD task2 startup");
     char buffer[20];
-    
+
     sprintf(buffer, "LCD 0x%x works!", lcda);
 
     uint8_t flip = 0;
@@ -129,12 +168,12 @@ void LCD_task2(void* argptr) {
         if(xSemaphoreTake(i2cMutex, portMAX_DELAY) == pdTRUE) {
             lcd_clear(lcd_addr);
             lcd_put_cursor(lcd_addr, flip, 0);
-            
+
             lcd_send_string(lcd_addr, buffer);
         }
         xSemaphoreGive(i2cMutex);
         flip = flip ^ 1;
-        vTaskDelay(pdMS_TO_TICKS(1000)); 
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
  */

@@ -110,6 +110,10 @@ extern char lcd_LOG_message[];
 SemaphoreHandle_t i2cMutex = NULL;
 
 
+// 2. Create queue handle (global or in main)
+QueueHandle_t lcdQueue = NULL;
+
+
 /*
  *   LED blink task
  */
@@ -301,14 +305,22 @@ void app_main(void)
     //   Set up i2c for all tasks
     i2cMutex = xSemaphoreCreateMutex();
     ESP_LOGI(TAG, "mutex created");
+    // We're going to go ahead and create the LCD queue even if we won't be using it(!)
+    // Create queue that can hold 5 messages
+    lcdQueue = xQueueCreate(5, sizeof(lcd_message_t));
+    if (lcdQueue == NULL) {
+        ESP_LOGE(TAG, "Failed to create LCD queue");
+    }
+
     i2c_master_init();  // now separate from lcd_init()
     ESP_LOGI(TAG, "i2c master is inited");
-    
+
     if (LCD_TASK == TASK_ON) {
         // initialize LCD hardware
         LCD_reset(SLAVE_ADDRESS1_LCD);
         // LCD_reset(SLAVE_ADDRESS2_LCD);
         ESP_LOGI(TAG, "LCD device init completed ");
+
         }
 
     // config hardware GPIO pins for on-board LED (board-specific)
@@ -397,8 +409,11 @@ void app_main(void)
         //
         uint8_t lcd_address1 = SLAVE_ADDRESS1_LCD;
         argptr = &lcd_address1;
-        // uint8_t lcd_address2 = SLAVE_ADDRESS2_LCD;
-        xTaskCreatePinnedToCore(LCD_task1, "LCD Task", DEFAULT_STACK, argptr, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+        // Create your LCD task...
+        xTaskCreate(lcd_task_3, "LCD_Task", 4096, NULL, 5, NULL);     // places msgs from messageQueue on HW display
+        xTaskCreate(lcd_task_3a, "LCD_TESTER", 4096, NULL, 5, NULL);  // sends regular messages
+
+        // xTaskCreatePinnedToCore(LCD_task1, "LCD Task", DEFAULT_STACK, argptr, TASK_PRIO_2, NULL, tskNO_AFFINITY);
         // xTaskCreatePinnedToCore(LCD_task2, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);
         ESP_LOGI(TAG, "LCD task created");
         }
