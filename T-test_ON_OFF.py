@@ -27,25 +27,32 @@ print(f"\nt-statistic: {t_stat:.4f}")
 eff_size = np.abs(np.mean(on_values)-np.mean(off_values))
 eff_pct = eff_size/(0.5*(np.mean(on_values)+np.mean(off_values)))
 print(f"p-value: {p_value:.4f}   Effect size: {eff_size:.4f} ({100*eff_pct:.1}%)")
-print(f"\nResult: {'Reject' if p_value < 0.05 else 'Fail to reject'} null hypothesis at α=0.05")
+print(f"\nResult: {'Reject'         if p_value < 0.05 else 'Fail to reject'} null hypothesis at α=0.05")
 print(f"\nResult is: {'Significant' if p_value < 0.05 else 'Insignificant'}  at α=0.05")
 
-ofv1 = []
-onv1 = []
-for i,ofv in enumerate(off_values):
-    if i>296:
-        break
-    if ofv > 2000:
-        ofv1.append(ofv)
-    if on_values[i] > 2000:
-        onv1.append(on_values[i])
+minplot = 2350
+maxplot = 2450
 
+nabove = 0
+nbelow = 0
+for i,ofv in enumerate(off_values):
+    if ofv > maxplot:
+        nabove+=1
+    if ofv < minplot:
+        nbelow+=1
+    if on_values[i] > maxplot:
+        nabove +=1
+    if on_values[i] < minplot:
+        nbelow +=1
+
+print(f'Plotting Range: {minplot}--{maxplot}')
+print(f'{nabove} exceed range, {nbelow} below range.')
 
 # Create histogram
 plt.figure(figsize=(10, 6))
-bins = np.linspace(2375,2395,20)
-plt.hist(ofv1, bins=bins, alpha=0.5, label='Off', color='blue')
-plt.hist(onv1, bins=bins, alpha=0.5, label='On', color='red')
+bins = np.linspace(minplot,maxplot,100)
+plt.hist(off_values, bins=bins, alpha=0.5, label='Off', color='blue')
+plt.hist(on_values, bins=bins, alpha=0.5, label='On', color='red')
 plt.xlabel('Value')
 plt.ylabel('Frequency')
 plt.title('Distribution of On vs Off Values')
