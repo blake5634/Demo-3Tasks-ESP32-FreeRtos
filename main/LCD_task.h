@@ -12,6 +12,7 @@ void LCD_task1(void* argptr);
 void LCD_task2(void* argptr);  // we're only using one in TPT-finder
 void lcd_task_3(void* argptr);  // this one works with messageQueue
 void lcd_task_3a(void* argptr);  // sends regular messages to the messageQueue
+void lcd_message(uint8_t, uint8_t, char* );
 
 esp_err_t LCD_16x2_init();
 

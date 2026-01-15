@@ -9,6 +9,7 @@
 #include "esp_system.h"
 #include "esp_timer.h"
 
+#include "LCD_task.h"
 #include "timer_Photo.h"
 #include "state_machine.h"
 
@@ -76,6 +77,8 @@ void state_machine_task(void *pvParameters){
         switch(state) {
             case SM_State_Paused:{
                 ESP_LOGI(TAG, "*****SM_State_Paused");
+                lcd_message(0,0,"                ");
+                lcd_message(0,0,"Paused");
                 // wait for user input via pushbutton
                 while ((bit = gpio_get_level(END_PAUSE_INPUT)) == FLOATING_PIN){
                     vTaskDelay(pdMS_TO_TICKS(10));
@@ -87,6 +90,8 @@ void state_machine_task(void *pvParameters){
             }
             case SM_State_Acquiring:{
                 ESP_LOGI(TAG, "*****SM_State_Acquiring");
+                lcd_message(0,0,"Acquire");
+
                 // initialize data pointers
                 data_ptr = data_buffer;
                 phase_ptr = phase_buffer;
@@ -109,6 +114,8 @@ void state_machine_task(void *pvParameters){
             }
             case SM_State_Uploading:{
                 ESP_LOGI(TAG, "*****SM_State_Uploading");
+                lcd_message(0,0,"Uploading");
+
                 // transfer data, format it, and print it as .csv
                 printf("\n\n   >>>START_LOG<<<       Download .csv\n");
                 printf("tag, value\n");

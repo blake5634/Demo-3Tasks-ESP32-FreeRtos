@@ -3,6 +3,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <inttypes.h>
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
@@ -19,10 +20,10 @@
 #include "unistd.h"
 
 extern SemaphoreHandle_t i2cMutex;
-extern void handle_error(char* msg);
+extern void handle_error(char* err_msg);
 
 // for sprintf use
-char msg[200];
+char err_msg[200];
 
 // void LCD_16x2_task(void*);
 // void LCD_16x2_init(void) ;
@@ -46,8 +47,8 @@ int check_lcd_addr(uint8_t lcd_addr, char* cmsg){
     if (lcd_addr==(uint8_t) SLAVE_ADDRESS1_LCD) valid = 1;
     if (lcd_addr==(uint8_t) SLAVE_ADDRESS2_LCD) valid = 2;
     if(valid==0){
-        sprintf(msg, "illegal LCD address (i2c bus): 0x%x  [%s]", lcd_addr, cmsg);
-        handle_error(msg);
+        sprintf(err_msg, "illegal LCD address (i2c bus): 0x%x  [%s]", lcd_addr, cmsg);
+        handle_error(err_msg);
         }
     return lcd_addr;
 }
@@ -79,7 +80,7 @@ void LCD_reset(uint8_t lcd_addr) {
 void lcd_task_3(void* argptr){
     uint8_t lcd_addr;
     uint8_t lcda;
-    lcd_message_t msg;
+    lcd_message_t lcd_msg;
     ESP_LOGI(LCD_tasks_TAG, " .. got here");
 
     lcd_addr = *((uint8_t *)argptr);
@@ -87,11 +88,11 @@ void lcd_task_3(void* argptr){
 
     while (1) {
         // Wait for message (blocks until message arrives)
-        if (xQueueReceive(lcdQueue, &msg, portMAX_DELAY) == pdTRUE) {
-            // ESP_LOGI(LCD_tasks_TAG, "rcvd msg from queue (3)");
+        if (xQueueReceive(lcdQueue, &lcd_msg, portMAX_DELAY) == pdTRUE) {
+            // ESP_LOGI(LCD_tasks_TAG, "rcvd lcd_msg from queue (3)");
             if (xSemaphoreTake(i2cMutex, portMAX_DELAY) == pdTRUE) {
-                lcd_put_cursor(lcda, msg.row, msg.col);
-                lcd_send_string(lcda, msg.text);
+                lcd_put_cursor(lcda, lcd_msg.row, lcd_msg.col);
+                lcd_send_string(lcda, lcd_msg.text);
                 xSemaphoreGive(i2cMutex);
             }
         }
@@ -101,17 +102,17 @@ void lcd_task_3(void* argptr){
     * a simple task to test LCD every x seconds
     */
 void lcd_task_3a(void* argptr){
-    lcd_message_t msg;
+    lcd_message_t lcd_msg;
     int counter = 0;
 
     while (1) {
         // Prepare message
-        msg.row = 1;
-        msg.col = 0;
-        snprintf(msg.text, sizeof(msg.text), "N: %04d", counter++);
+        lcd_msg.row = 1;
+        lcd_msg.col = 0;
+        snprintf(lcd_msg.text, sizeof(lcd_msg.text), "N: %04d", counter++);
 
         // Send to LCD task (non-blocking with timeout)
-        if (xQueueSend(lcdQueue, &msg, pdMS_TO_TICKS(100)) != pdTRUE) {
+        if (xQueueSend(lcdQueue, &lcd_msg, pdMS_TO_TICKS(100)) != pdTRUE) {
             ESP_LOGW("TASK", "LCD queue full!");
         }
         // ESP_LOGI(LCD_tasks_TAG, "Message sent from 3a");
@@ -119,6 +120,18 @@ void lcd_task_3a(void* argptr){
     }
 }
 
+void lcd_message(uint8_t row, uint8_t col, char* text){
+    lcd_message_t lcd_msg;
+    lcd_msg.row = row;
+    lcd_msg.col = col;
+    strcpy(lcd_msg.text, text);
+    // Send to LCD task (non-blocking with timeout)
+    if (xQueueSend(lcdQueue, &lcd_msg, pdMS_TO_TICKS(100)) != pdTRUE) {
+        ESP_LOGW("TASK", "LCD queue full!");
+    }
+    ESP_LOGI(LCD_tasks_TAG, "Message sent using lcd_msg()");
+
+}
 
 
 void LCD_task1(void* argptr) {
