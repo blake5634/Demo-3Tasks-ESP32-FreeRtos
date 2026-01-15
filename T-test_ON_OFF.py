@@ -24,8 +24,11 @@ print('Filename: ', fname)
 print(f"On state:  n={len(on_values)}, mean={np.mean(on_values):.2f}, std={np.std(on_values, ddof=1):.2f}")
 print(f"Off state: n={len(off_values)}, mean={np.mean(off_values):.2f}, std={np.std(off_values, ddof=1):.2f}")
 print(f"\nt-statistic: {t_stat:.4f}")
-print(f"p-value: {p_value:.4f}")
+eff_size = np.abs(np.mean(on_values)-np.mean(off_values))
+eff_pct = eff_size/(0.5*(np.mean(on_values)+np.mean(off_values)))
+print(f"p-value: {p_value:.4f}   Effect size: {eff_size:.4f} ({100*eff_pct:.1}%)")
 print(f"\nResult: {'Reject' if p_value < 0.05 else 'Fail to reject'} null hypothesis at α=0.05")
+print(f"\nResult is: {'Significant' if p_value < 0.05 else 'Insignificant'}  at α=0.05")
 
 ofv1 = []
 onv1 = []
@@ -40,8 +43,9 @@ for i,ofv in enumerate(off_values):
 
 # Create histogram
 plt.figure(figsize=(10, 6))
-plt.hist(ofv1, bins=20, alpha=0.5, label='Off', color='blue')
-plt.hist(onv1, bins=20, alpha=0.5, label='On', color='red')
+bins = np.linspace(2375,2395,20)
+plt.hist(ofv1, bins=bins, alpha=0.5, label='Off', color='blue')
+plt.hist(onv1, bins=bins, alpha=0.5, label='On', color='red')
 plt.xlabel('Value')
 plt.ylabel('Frequency')
 plt.title('Distribution of On vs Off Values')
