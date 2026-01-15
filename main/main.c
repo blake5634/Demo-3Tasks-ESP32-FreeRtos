@@ -53,7 +53,7 @@
 #define TASK_OFF             0
 
 #define LED_TASK            TASK_ON
-#define LCD_TASK            TASK_OFF
+#define LCD_TASK            TASK_ON
 #define STATE_MACHINE       TASK_ON     // PHOTONIC TASK now timer driven by this
 #define PHOTONIC_TASK       TASK_OFF
 #define HELLO_WORLD_TASK    TASK_OFF
@@ -410,8 +410,8 @@ void app_main(void)
         uint8_t lcd_address1 = SLAVE_ADDRESS1_LCD;
         argptr = &lcd_address1;
         // Create your LCD task...
-        xTaskCreate(lcd_task_3, "LCD_Task", 4096, NULL, 5, NULL);     // places msgs from messageQueue on HW display
-        xTaskCreate(lcd_task_3a, "LCD_TESTER", 4096, NULL, 5, NULL);  // sends regular messages
+        xTaskCreate(lcd_task_3,    "LCD_Task", 4096, argptr, 5, NULL);     // places msgs from messageQueue on HW display
+        xTaskCreate(lcd_task_3a, "LCD_TESTER", 4096, argptr, 5, NULL);  // sends regular messages
 
         // xTaskCreatePinnedToCore(LCD_task1, "LCD Task", DEFAULT_STACK, argptr, TASK_PRIO_2, NULL, tskNO_AFFINITY);
         // xTaskCreatePinnedToCore(LCD_task2, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);

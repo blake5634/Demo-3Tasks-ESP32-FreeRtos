@@ -71,19 +71,24 @@ void LCD_reset(uint8_t lcd_addr) {
         usleep(d200ms);
         xSemaphoreGive(i2cMutex);
         usleep(d100ms);
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(100)); // NEEDED???
     }
 }
 
 
 void lcd_task_3(void* argptr){
-    uint8_t lcd_addr = *((uint8_t *)argptr);
-    uint8_t lcda = check_lcd_addr(lcd_addr,"LCD_task1 startup");
+    uint8_t lcd_addr;
+    uint8_t lcda;
     lcd_message_t msg;
+    ESP_LOGI(LCD_tasks_TAG, " .. got here");
+
+    lcd_addr = *((uint8_t *)argptr);
+    lcda   = check_lcd_addr(lcd_addr,"LCD_task startup");
 
     while (1) {
         // Wait for message (blocks until message arrives)
         if (xQueueReceive(lcdQueue, &msg, portMAX_DELAY) == pdTRUE) {
+            // ESP_LOGI(LCD_tasks_TAG, "rcvd msg from queue (3)");
             if (xSemaphoreTake(i2cMutex, portMAX_DELAY) == pdTRUE) {
                 lcd_put_cursor(lcda, msg.row, msg.col);
                 lcd_send_string(lcda, msg.text);
@@ -109,8 +114,8 @@ void lcd_task_3a(void* argptr){
         if (xQueueSend(lcdQueue, &msg, pdMS_TO_TICKS(100)) != pdTRUE) {
             ESP_LOGW("TASK", "LCD queue full!");
         }
-
-        vTaskDelay(pdMS_TO_TICKS(3000));
+        // ESP_LOGI(LCD_tasks_TAG, "Message sent from 3a");
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 
