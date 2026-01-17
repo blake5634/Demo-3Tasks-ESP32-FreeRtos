@@ -46,7 +46,7 @@ for i,ofv in enumerate(off_values):
         nbelow +=1
 
 print(f'Plotting Range: {minplot}--{maxplot}')
-print(f'{nabove} exceed range, {nbelow} below range.')
+print(f'Plot Outlier Report:  {nabove} above, {nbelow} below.')
 
 # Create histogram
 plt.figure(figsize=(10, 6))

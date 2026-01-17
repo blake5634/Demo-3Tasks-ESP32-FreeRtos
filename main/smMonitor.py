@@ -45,39 +45,40 @@ def strip_ansi(text):
     return ansi_escape.sub('', text)
 
 def main():
+    csv_name = ''
     csv_file = None
     capture_active = False
     line_buffer = ""  # Buffer for building complete lines
 
     # Create a pseudo-terminal
-    master, slave = pty.openpty()
+    leader, follower = pty.openpty()
 
     # Start idf.py monitor with auto-port detection
     cmd = ['idf.py', 'monitor']
 
     debug("Starting monitor with auto-port detection...")
 
-    # Start the process with the slave end of the PTY
+    # Start the process with the follower end of the PTY
     process = subprocess.Popen(
         cmd,
-        stdin=slave,
-        stdout=slave,
-        stderr=slave,
+        stdin=follower,
+        stdout=follower,
+        stderr=follower,
         close_fds=True
     )
 
-    # Close slave in parent process (child has its own copy)
-    os.close(slave)
+    # Close follower in parent process (child has its own copy)
+    os.close(follower)
 
     try:
         while True:
             # Check if data is available from the PTY or stdin
-            ready, _, _ = select.select([master, sys.stdin], [], [], 0.1)
+            ready, _, _ = select.select([leader, sys.stdin], [], [], 0.1)
 
             # Handle data from the monitor (ESP32 output)
-            if master in ready:
+            if leader in ready:
                 try:
-                    data = os.read(master, 1024)
+                    data = os.read(leader, 1024)
                     if not data:
                         break
 
@@ -105,6 +106,7 @@ def main():
                             if not capture_active:
                                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                                 filename = f"capture_{timestamp}.csv"
+                                csv_name = filename
                                 csv_file = open(filename, 'w')
                                 capture_active = True
                                 # sys.stdout.write(f"\n[📊 CAPTURE STARTED: {filename}]\n")
@@ -139,7 +141,7 @@ def main():
                 try:
                     user_input = os.read(sys.stdin.fileno(), 1024)
                     if user_input:
-                        os.write(master, user_input)
+                        os.write(leader, user_input)
                 except OSError:
                     break
 
@@ -151,13 +153,22 @@ def main():
         print("\n[Monitor interrupted by user]")
 
     finally:
+
         if csv_file:
             csv_file.close()
-            debug(f"[File closed: {csv_file.name}]")
+            debug(f"[File closed: {csv_name}]")
 
-        os.close(master)
+        os.close(leader)
         process.terminate()
         process.wait()
+        existing_files = subprocess.run(['ls -lth *.csv'], capture_output=True, text=True, shell=True)
+        print('exiting files output: ', len(existing_files.stdout), 'characters')
+        print (existing_files.stdout)
+        print(f'File saved as: {csv_name}. If you would like to rename it, please enter a new name now:')
+        newname = input(">")
+        if len(newname)> 4:
+            os.rename(csv_name, newname)
+            print(f'{csv_name} renamed to {newname}')
         if DEBUG:
             debug_log.close()
 
