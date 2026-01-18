@@ -24,14 +24,20 @@ print('Filename: ', fname)
 print(f"On state:  n={len(on_values)}, mean={np.mean(on_values):.2f}, std={np.std(on_values, ddof=1):.2f}")
 print(f"Off state: n={len(off_values)}, mean={np.mean(off_values):.2f}, std={np.std(off_values, ddof=1):.2f}")
 print(f"\nt-statistic: {t_stat:.4f}")
+data_mean = 0.5*(np.mean(on_values)+np.mean(off_values))
 eff_size = np.abs(np.mean(on_values)-np.mean(off_values))
-eff_pct = eff_size/(0.5*(np.mean(on_values)+np.mean(off_values)))
+eff_pct = eff_size/data_mean
 print(f"p-value: {p_value:.4f}   Effect size: {eff_size:.4f} ({100*eff_pct:.1}%)")
 print(f"\nResult: {'Reject'         if p_value < 0.05 else 'Fail to reject'} null hypothesis at α=0.05")
 print(f"\nResult is: {'Significant' if p_value < 0.05 else 'Insignificant'}  at α=0.05")
 
-minplot = 2750
-maxplot = 4250
+# set data histogram plotting limits.   Constant limits facilitate graphical comparison
+#
+ndata_mean = 2440  # nominal values to standardize plot
+neff_size  = 40     #   "       "
+pltctr = ndata_mean
+minplot = ndata_mean-2*neff_size
+maxplot = ndata_mean+2*neff_size
 
 nabove = 0
 nbelow = 0
@@ -55,7 +61,7 @@ plt.hist(off_values, bins=bins, alpha=0.5, label='Off', color='blue')
 plt.hist(on_values, bins=bins, alpha=0.5, label='On', color='red')
 plt.xlabel('Value')
 plt.ylabel('Frequency')
-plt.title('Distribution of On vs Off Values')
+plt.title(f'Distribution of On vs Off Values: {fname}')
 plt.legend()
 plt.grid(True, alpha=0.3)
 plt.show()
