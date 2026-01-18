@@ -20,20 +20,12 @@ void state_machine_init(){
     init_photonics();
     ESP_LOGI(TAG, "photonics pinouts have been set (via State Machine init.)");
 
-    /*
-    //   1) set END_PAUSE_INPUT to input
-    //
-    //Configure the input pin to trigger transition out of pause state
-    gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << END_PAUSE_INPUT),  // Bitmask of pins
-        .mode = GPIO_MODE_INPUT,                    // Set as input
-        .pull_up_en = GPIO_PULLUP_ENABLE,           // Disable pull-up
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,      // Disable pull-down
-        .intr_type = GPIO_INTR_DISABLE              // Disable interrupts
-    };
-    // send the config to hardware
-    gpio_config(&io_conf);
-    */
+
+
+
+    //Initialize the semaphore which syncs w/ the ISR
+    init_acquisition_semaphore();
+
     // Reset to clean state first
     gpio_reset_pin(END_PAUSE_INPUT);
 
@@ -113,7 +105,11 @@ void state_machine_task(void *pvParameters){
                 start_timer(gptimer);
 
                 // Wait for ISR to finish up and stop itself
-                vTaskDelay(pdMS_TO_TICKS(1500)); // should use a semphore
+                if (xSemaphoreTake(acquisition_complete_sem, pdMS_TO_TICKS(2000)) == pdTRUE) {
+                        ESP_LOGI(TAG, "Acquisition completed successfully");
+                    } else {
+                        ESP_LOGW(TAG, "Acquisition timeout - may be incomplete!");
+                    }
                 state = SM_State_Uploading;
                 break;
             }

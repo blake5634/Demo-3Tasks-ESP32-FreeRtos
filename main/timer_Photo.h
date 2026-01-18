@@ -5,6 +5,7 @@
 #include "unistd.h"
 #include "driver/gptimer.h"
 #include "esp_timer.h"
+#include "freertos/semphr.h"
 
 // LED output
 #define PIN_EXCIT_DRIVE   GPIO_NUM_0   //GPIO-00, module pin 3
@@ -71,6 +72,12 @@ extern volatile uint8_t *phase_ptr;   // pointer for async writing/reading buff.
 #define EXCITATION_ON   1
 #define EXCITATION_OFF  0
 
+// Sync Semaphore
+// Declare the semaphore handle as extern so other files can access it
+extern SemaphoreHandle_t acquisition_complete_sem;
+
+// Function to initialize the semaphore (call once during init)
+void init_acquisition_semaphore(void);
 
 // function declarations
 esp_err_t init_photonics(void);  // initialize photonic_task

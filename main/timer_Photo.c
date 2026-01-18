@@ -36,6 +36,8 @@ static bool timer_isr_callback(gptimer_handle_t timer,
                                const gptimer_alarm_event_data_t *edata,
                                void *user_ctx);
 
+// Sync semaphore for ISR w state_machine_task
+SemaphoreHandle_t acquisition_complete_sem = NULL;
 
 // my ADC function
 uint16_t read_adc(void);
@@ -153,7 +155,17 @@ void start_timer(gptimer_handle_t gptimer){
     ESP_ERROR_CHECK(gptimer_start(gptimer));
     }
 
-
+    /*
+     * thanks Claude!
+     */
+void init_acquisition_semaphore(void) {
+    if (acquisition_complete_sem == NULL) {
+        acquisition_complete_sem = xSemaphoreCreateBinary();
+        if (acquisition_complete_sem == NULL) {
+            ESP_LOGE(TAG, "Failed to create acquisition semaphore");
+        }
+    }
+}
 
 /************************************************************************   ISR
  *
@@ -165,6 +177,7 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
                                          void *user_ctx)  {
     int idx=0;
     uint16_t tmp=0;
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     switch(isr_state) {
         case STATE_GPIO_TOGGLE:
             // Toggle GPIO
@@ -259,9 +272,14 @@ static bool IRAM_ATTR timer_isr_callback(gptimer_handle_t timer,
         };
         gptimer_set_alarm_action(timer, &alarm_config);
     }
+    else {
+        xSemaphoreGiveFromISR(acquisition_complete_sem, &xHigherPriorityTaskWoken);
+
+    }
     // else - timer does not cause any more interrupts.
 
-    return false;// return to interrupted task (true = switch to highest prio task)
+    return xHigherPriorityTaskWoken; // rec'd by Claude over false
+    // return to interrupted task (true = switch to highest prio task)
    }
 
 void photonic_task(void*) {
