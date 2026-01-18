@@ -30,8 +30,8 @@ print(f"p-value: {p_value:.4f}   Effect size: {eff_size:.4f} ({100*eff_pct:.1}%)
 print(f"\nResult: {'Reject'         if p_value < 0.05 else 'Fail to reject'} null hypothesis at α=0.05")
 print(f"\nResult is: {'Significant' if p_value < 0.05 else 'Insignificant'}  at α=0.05")
 
-minplot = 2350
-maxplot = 2450
+minplot = 2750
+maxplot = 4250
 
 nabove = 0
 nbelow = 0
