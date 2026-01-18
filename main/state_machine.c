@@ -92,13 +92,18 @@ void state_machine_task(void *pvParameters){
                 ESP_LOGI(TAG, "*****SM_State_Acquiring");
                 lcd_message(0,0,"Acquire");
 
+                // STOP timer first if it's running
+                gptimer_stop(gptimer);
+
                 // initialize data pointers
                 data_ptr = data_buffer;
                 phase_ptr = phase_buffer;
                 sensing_cycle_count = 0;
+                // set up initial state of the ISR
+                gpio_level = 0;           // req'd at start of DAQ cycles
                 isr_state = STATE_GPIO_TOGGLE;  //set where ISR will start
 
-                // Start the isr going for excitation and acquisition
+                // Start the timer-->isr going for excitation and acquisition
                 // Set next alarm
                 gptimer_alarm_config_t alarm_config = {
                     .alarm_count = 2500,   //
@@ -108,7 +113,7 @@ void state_machine_task(void *pvParameters){
                 start_timer(gptimer);
 
                 // Wait for ISR to finish up and stop itself
-                vTaskDelay(pdMS_TO_TICKS(1500));
+                vTaskDelay(pdMS_TO_TICKS(1500)); // should use a semphore
                 state = SM_State_Uploading;
                 break;
             }
@@ -133,9 +138,9 @@ void state_machine_task(void *pvParameters){
                         strcpy(tag,"off");
                     }
                     else
-                        strcpy(tag,"on");
+                        strcpy(tag,"on ");
                     value = (int) *data_ptr;
-                    printf("%d, %s, %d\n",j, tag,value);
+                    printf("%3d, %s, %d\n",j, tag,value);
                     j++;
                     data_ptr++;
                     phase_ptr++;

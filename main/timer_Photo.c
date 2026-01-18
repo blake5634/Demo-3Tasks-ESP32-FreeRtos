@@ -129,6 +129,10 @@ esp_err_t init_photonics(void) {
 
     ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, NULL));
 
+    // Enable timer
+    ESP_ERROR_CHECK(gptimer_enable(gptimer));
+
+
    // start_timer(gptimer);
 
     return statusCode;
@@ -136,8 +140,6 @@ esp_err_t init_photonics(void) {
 
 
 void start_timer(gptimer_handle_t gptimer){
-    // Enable timer
-    ESP_ERROR_CHECK(gptimer_enable(gptimer));
 
     // Set first alarm to start quickly
     gptimer_alarm_config_t alarm_config = {
