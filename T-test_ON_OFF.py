@@ -10,11 +10,12 @@ fname = sys.argv[1]
 data = pd.read_csv(fname, names=['j', 'state', 'value'], skipinitialspace=True)
 
 
+data['state'] = data['state'].str.strip()
+
+
 # Separate on and off states and convert to float
 on_values = data[data['state'] == 'on']['value'].astype(float).values
 off_values = data[data['state'] == 'off']['value'].astype(float).values
-
-
 
 # Perform independent samples t-test
 t_stat, p_value = stats.ttest_ind(on_values, off_values)
