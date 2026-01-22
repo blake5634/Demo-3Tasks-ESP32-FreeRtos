@@ -15,7 +15,6 @@ data['state'] = data['state'].str.strip()
 on_values = data[data['state'] == 'on']['value'].astype(float).values
 off_values = data[data['state'] == 'off']['value'].astype(float).values
 
-
 # Perform independent samples t-test
 t_stat, p_value = stats.ttest_ind(on_values, off_values)
 
