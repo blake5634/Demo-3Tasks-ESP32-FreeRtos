@@ -1,6 +1,6 @@
 # MultiTasking ESP 32 tasks using IDF and FreeRTOS with i2c etc.
 
-#  This repo is no longer in active development!!
+# 22-Jan-26: This repo is no longer in active development!!
    - New repo going forward is TPT_Photonics_ESP32
    - This repo still can serve the purpose described below.
      
