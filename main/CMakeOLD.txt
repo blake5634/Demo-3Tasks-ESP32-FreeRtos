@@ -1,1 +1,0 @@
-set(COMPONENT_SRCS, "BH_demo_esp32c6.c")

@@ -13,58 +13,22 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
-#include "driver/i2c.h"
 #include "esp_chip_info.h"
-#include "esp_flash.h"
 #include "esp_log.h"
-#include "led_strip.h"
 #include "esp_system.h"
-#include "i2c_lcd.h"
-#include "LCD_task.h"
-#include "unistd.h"
-#include "timer_Photo.h"
-#include "state_machine.h"
+#include "esp_freertos_hooks.h"
 
 
 //
-//  Blake's demo of multiple FreeRTOS tasks
-//            (Jul 25)
-//
-//     Adapted to drive the TPT-Finder photonics LED/Photodiode board
-//            (Nov/Dec 25)
+//  Blake's demo of multiple FreeRTOS tasks    With CPU Load output bit
+//            (Jul 26)
 //
 
 
 /*------------------------------------------------------------*/
 /* Macros */
-#define PROMPT_STR CONFIG_IDF_TARGET
-#define TASK_PRIO_4         4
-#define TASK_PRIO_3         3
-#define TASK_PRIO_2         2
-#define TASK_PRIO_1         1
-#define COMP_LOOP_PERIOD    5000
-#define SEM_CREATE_ERR_STR      "semaphore creation failed"
-#define QUEUE_CREATE_ERR_STR    "queue creation failed"
-
-//
-//  Choose tasks which will be run
-//
-#define TASK_ON              1
-#define TASK_OFF             0
-
-#define LED_TASK            TASK_ON
-#define LCD_TASK            TASK_ON
-#define STATE_MACHINE       TASK_ON     // PHOTONIC TASK now timer driven by this
-#define PHOTONIC_TASK       TASK_OFF
-#define HELLO_WORLD_TASK    TASK_OFF
-#define PHOTONICS_TEST      TASK_OFF
-#define CPU_LOAD_TASK       TASK_OFF
 
 
-// LED Task related functions (in this file)
-static void configure_led(void);
-static void setLedFromState(void);
-static void setLedFromArg(uint8_t);
 
 
 /////////// BH
@@ -74,25 +38,35 @@ void handle_error(char* );  // log an error to console and freeze
 
 
 //FREE-RTOS tasks defined here:
-// blinker state
-static uint8_t s_led_state = 0;
-static void LED_task(void*);
+static void PerfBit_SetBusy(void*);
+static void PerfBit_SetFree(void*);
+static void cpu_load_task_1k(void*);
+static void cpu_load_task_10k(void*);
+static void cpu_load_task_100k(void*);
 static void hello_task(void *arg);
+// hook from the IDLE task
+//void vApplicationIdleHook( void );  //OLD Style
+bool my_idle_callback(void);
 
-#define TAG  "TPT-main.c"
+// for the tasks
+unsigned long squareTheInts(unsigned long);
+
+
+#define TAG  "TPT-perfBit_testing.c"
 
 //   BH defines
 #define DEFAULT_STACK  4096
-#define BLINK_PERIOD    300 //ms
-#define BLINK_GPIO      8
-#define LED_BIT_ON      (uint8_t) 1
-#define LED_BIT_OFF     (uint8_t) 0
-#define IDLE_GPIO       18    // PC bd Test Point TP35
+#define BUSY_GPIO       10    //
+#define TEST_GPIO        9    //
 
 
-// Configure LED task
-#define LED_TASK_TIMED    1  // 1 = periodic as above; 0 = load avg pwm
+#define TASK_PRIO_MAX     configMAX_PRIORITIES - 1
 
+#define TASK_PRIO_2       configMAX_PRIORITIES - 2
+
+#define TASK_PRIO_5       1  // lowest you can have (just above official Idle tas)
+
+// static int working_flag = 0;   // each task needs to set this to 1 while working
 
 
 void handle_error(char* msg){
@@ -103,175 +77,110 @@ void handle_error(char* msg){
     }
 }
 
+/*
+ *   Non task approach.  Each task sets the BUSY bit just
+ *     after starting its loop, and clears it just
+ *         before  vTaskDelay (reset by idle callback),
+ *
+ */
+void Set_Busy(void){
+        gpio_set_level(BUSY_GPIO, 1);
+}
+void Clear_Busy(void){
+        gpio_set_level(BUSY_GPIO, 0);
+}
 
-extern char lcd_LOG_message[];
-
-// i2c mutex:  this is used to make sure only one task can transact on i2c at a time.
-SemaphoreHandle_t i2cMutex = NULL;
-
-
-// 2. Create queue handle (global or in main)
-QueueHandle_t lcdQueue = NULL;
 
 
 /*
- *   LED blink task
+ *   Set Perf Bit task (priority PRIOR_HIGHEST)
  */
 
-static void LED_task(void*)
+static void PerfBit_SetBusy(void*)
+{   int x = 1;
+    while(1) {
+        x = ~x;
+        gpio_set_level(BUSY_GPIO, 1);
+        vTaskDelay(pdMS_TO_TICKS(7));
+    }
+}
+
+/*
+ *   Set Perf Bit task (priority PRIOR_LOWEST)
+ */
+
+static void PerfBit_SetFree(void*)
 {
-    while (1) {
-        if(LED_TASK_TIMED){
-            //
-            // Normal LED Task:
-            //
-            // ESP_LOGI(TAG, "Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
-            setLedFromState();
-            /* Toggle the LED state */
-            s_led_state = !s_led_state;
-            vTaskDelay(BLINK_PERIOD / portTICK_PERIOD_MS);
-            }
-        else {
-            //
-            //   LED task to show Free CPU Time
-            //
-            setLedFromArg(LED_BIT_ON); // turn   LED  (indicate busy)
-            gpio_set_level(IDLE_GPIO, 0);  // Test point 33 on V02board
-            vTaskDelay(1); // wait for next tick
-            }
-        // ESP_LOGI(TAG, "Starting LED cycle (%d)", (int)LED_TASK_TIMED);
+    while(1) {
+        gpio_set_level(BUSY_GPIO, 0);  // will be pre-empted!
+        vTaskDelay(pdMS_TO_TICKS(4));
         }
 }
 
-// set to lowest priority
-static void cpu_load_task(void*)
-{
+/*
+ *   OLD STYLE
+void vApplicationIdleHook( void ){  // same intent as PerfBit_SetFree
+    gpio_set_level(BUSY_GPIO, 0);
+}
+*/
+
+/*
+ * New style
+ */
+bool my_idle_callback(void) {
+    // gpio_set_level(BUSY_GPIO, 0);  // clear if idle
+    return true; // Call once per tick
+}
+
+/*
+ *
+ *    Set up three CPU user tasks
+ *
+ */
+
+
+static void  cpu_load_task_1k(void*){
     while(1){
-        setLedFromArg(LED_BIT_OFF); // turn   LED (indicate idle)
-        gpio_set_level(IDLE_GPIO, 1);  // Test point  V02board
-        vTaskDelay(1);
-        }
-}
 
-/*********************************************************************
- *   Initialize LED task differently depending on hardware
- *
- *   Following code block (from "blink" example) is overkill for
- *     Waveshare ESP32c6-zero for which
- *        we should configure:   Blink LED type:  "LED strip"
- *        and
- *                               LED strip backend peripheral "RMT"
- *
- *   TODO:  move this to a separate .c file for LED hardware setup.
- */
+    gpio_set_level(TEST_GPIO, 1);  // flag the cycle for scope
+    squareTheInts(100);
+    gpio_set_level(TEST_GPIO, 0);
 
-#ifdef CONFIG_BLINK_LED_STRIP
+    Set_Busy();
+    squareTheInts(500);   //
+    Clear_Busy();
 
-static led_strip_handle_t led_strip;
-
-static void setLedFromArg(uint8_t on_off)
-{
-    /* If the addressable LED is enabled */
-    if (on_off) {
-        /* Set the LED pixel using RGB from 0 (0%) to 255 (100%) for each color */
-        led_strip_set_pixel(led_strip, 0, 16, 16, 16);
-        /* Refresh the strip to send data */
-        led_strip_refresh(led_strip);
-    } else {
-        /* Set all LED off to clear all pixels */
-        led_strip_clear(led_strip);
+    // vTaskDelay(pdMS_TO_TICKS(30));
+    // vTaskDelay(1);
     }
 }
 
-static void setLedFromState(void)
-{
-    /* If the addressable LED is enabled */
-    if (s_led_state) {
-        /* Set the LED pixel using RGB from 0 (0%) to 255 (100%) for each color */
-        led_strip_set_pixel(led_strip, 0, 16, 16, 16);
-        /* Refresh the strip to send data */
-        led_strip_refresh(led_strip);
-    } else {
-        /* Set all LED off to clear all pixels */
-        led_strip_clear(led_strip);
+static void  cpu_load_task_10k(void*){
+    while(1){
+    Set_Busy();
+    squareTheInts(20*1000); // uSec
+    Clear_Busy();
+    // vTaskDelay(1);
     }
 }
 
-static void configure_led(void)
-{
-    ESP_LOGI(TAG, "Configure pins to blink LED_STRIP LED");
-    /* LED strip initialization with the GPIO and pixels number*/
-    led_strip_config_t strip_config = {
-        .strip_gpio_num = BLINK_GPIO,
-        .max_leds = 1, // at least one LED on board
-    };
-// RMT is the required config for WaveShare ESP32-C6
-#if CONFIG_BLINK_LED_STRIP_BACKEND_RMT
-    ESP_LOGI(TAG, "Configure LED_STRIP back-end RMT");
-
-    led_strip_rmt_config_t rmt_config = {
-        .resolution_hz = 10 * 1000 * 1000, // 10MHz
-        .flags.with_dma = false,
-    };
-    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
-#elif CONFIG_BLINK_LED_STRIP_BACKEND_SPI
-    led_strip_spi_config_t spi_config = {
-        .spi_bus = SPI2_HOST,
-        .flags.with_dma = true,
-    };
-    ESP_ERROR_CHECK(led_strip_new_spi_device(&strip_config, &spi_config, &led_strip));
-#else
-#error "unsupported LED strip backend"
-#endif
-    /* Set all LED off to clear all pixels */
-    led_strip_clear(led_strip);
-}
-
-
-
-// if this were configured to use GPIO (NOT what waveshare ESP32C6-Zero uses)
-//
-//   NOT for TPT-Finder HW
-//
-#elif CONFIG_BLINK_LED_GPIO
-
-static void setLedFromState(void)
-{
-    ESP_LOGI(TAG,"GPIO: Setting LED from state");
-    /* Set the GPIO level according to the state (LOW or HIGH)*/
-    gpio_set_level(BLINK_GPIO, s_led_state);
-}
-
-static void setLedFromArg(uint8_t on_off)
-    {
-    gpio_set_level(BLINK_GPIO, on_off);
+static void  cpu_load_task_100k(void*){
+    while(1){
+    Set_Busy();
+    squareTheInts(10*1000);
+    Clear_Busy();
+    // vTaskDelay(1);
     }
-
-static void configure_led(void)
-{
-    ESP_LOGI(TAG, "Configure GPIO pins (GPIO LED MODE ONLY)!");
-    gpio_reset_pin(BLINK_GPIO);
-    /* Set the GPIO as a push/pull output */
-    gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
-
 }
-
-#else
-#error "unsupported LED type"
-#endif
-
-/*
- *
- *    End of "blink code block"
- ***************************************************************/
-
 
 static void hello_task(void *arg)
 {
 
     int i=0;
     while(1) {
+        Clear_Busy();
         vTaskDelay(2000/portTICK_PERIOD_MS);
+        Set_Busy();
         printf("\n\n\n");
         i++;
         printf("Hello world! (task rep: %d) \n", i);
@@ -279,150 +188,60 @@ static void hello_task(void *arg)
     }
 }
 
+
+/*
+ *  Compute for N micro sec
+ */
+unsigned long squareTheInts(unsigned long N){
+    // gpio_set_level(TEST_GPIO, 1);
+    volatile float data[200]={0.0};
+    for (int i=0;i<N*6;i++){  // N in micro sec
+        data[i%200] = (float)i * (float)i;
+    }
+    // gpio_set_level(TEST_GPIO, 0);
+    return (unsigned long) N;
+}
+
 void app_main(void)
 {
 
+    ESP_LOGI(TAG, "configMAX_PRIORITIES = %d\n", configMAX_PRIORITIES);
+
+    // this will be called when there is nothing to do.
+    esp_register_freertos_idle_hook(my_idle_callback);
 
     /*
-     * Validate task configuration constraints
+     * init gpio
      */
-    if (CPU_LOAD_TASK == TASK_ON && LED_TASK == TASK_OFF){
-        ESP_LOGI(TAG,"Error:  LED_TASK must be ON for CPU_LOAD_TASK.");
-        handle_error("Stopping.");
-        }
-    if (STATE_MACHINE == TASK_ON && PHOTONIC_TASK == TASK_ON){
-        ESP_LOGI(TAG,"Error:  PHOTONIC_TASK must be OFF for STATE_MACHINE.");
-        handle_error("Stopping.");
-    }
 
+    gpio_reset_pin(BUSY_GPIO);
+    /* Set the GPIO as a push/pull output */
+    gpio_set_direction(BUSY_GPIO, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(TEST_GPIO);
+    /* Set the GPIO as a push/pull output */
+    gpio_set_direction(TEST_GPIO, GPIO_MODE_OUTPUT);
 
-
-    /***************************************************************
-     *
-     * Hardware and Software setups and INITIALIZATIONS
-     *
-     */
-    //   Set up i2c for all tasks
-    i2cMutex = xSemaphoreCreateMutex();
-    ESP_LOGI(TAG, "mutex created");
-    // We're going to go ahead and create the LCD queue even if we won't be using it(!)
-    // Create queue that can hold 5 messages
-    lcdQueue = xQueueCreate(5, sizeof(lcd_message_t));
-    if (lcdQueue == NULL) {
-        ESP_LOGE(TAG, "Failed to create LCD queue");
-    }
-
-    i2c_master_init();  // now separate from lcd_init()
-    ESP_LOGI(TAG, "i2c master is inited");
-
-    if (LCD_TASK == TASK_ON) {
-        // initialize LCD hardware
-        LCD_reset(SLAVE_ADDRESS1_LCD);
-        // LCD_reset(SLAVE_ADDRESS2_LCD);
-        ESP_LOGI(TAG, "LCD device init completed ");
-
-        }
-
-    // config hardware GPIO pins for on-board LED (board-specific)
-    if (LED_TASK == TASK_ON) {
-        configure_led();   // defined above for two configs
-        ESP_LOGI(TAG, "on-board LED hardware has been configured.");
-        }
-
-    if (STATE_MACHINE==TASK_ON){
-        state_machine_init();
-        ESP_LOGI(TAG, "State Machine has been set up.");
-        }
-
-    if (PHOTONIC_TASK == TASK_ON || PHOTONICS_TEST==TASK_ON) {
-        // setup for photonics board interface.
-        init_photonics();
-        ESP_LOGI(TAG, "photonics pinouts have been set");
-        }
-
-    if (CPU_LOAD_TASK == TASK_ON){
-        configure_led();   // defined above for two configs
-        ESP_LOGI(TAG, "on-board LED hardware has been configured.");
-        // Test Point TP33
-        gpio_reset_pin(IDLE_GPIO);
-        /* Set the GPIO as a push/pull output */
-        gpio_set_direction(IDLE_GPIO, GPIO_MODE_OUTPUT);
-    }
 
     /***********************************************************************
      *
      * Start up the Free-RTOS Tasks
      */
-    void* argptr = NULL;  // use for task arguments
 
     ESP_LOGI(TAG, "\n\n      Starting task(s)...\n\n");
 
+    int Core = 0;
 
-    if (STATE_MACHINE==TASK_ON){
-         xTaskCreatePinnedToCore(state_machine_task, "State Machine Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
-        ESP_LOGI(TAG, "State Machine Task Created");
-        }
+//    xTaskCreatePinnedToCore(PerfBit_SetBusy, "Set Busy Bit",   DEFAULT_STACK, NULL, TASK_PRIO_MAX, NULL, Core);
+    // xTaskCreatePinnedToCore(PerfBit_SetFree, "Clear Busy Bit", DEFAULT_STACK, NULL, TASK_PRIO_5,   NULL, Core);
 
-    if (HELLO_WORLD_TASK==TASK_ON) {
-    /*
-     *   HELLO WORLD on serial console
-     */
-        xTaskCreatePinnedToCore(hello_task, "Hello World Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
-        ESP_LOGI(TAG, "Hello world (serial) task created");
-        }
+    xTaskCreatePinnedToCore(cpu_load_task_1k, "CPU load 1k",   DEFAULT_STACK, NULL, 5, NULL, Core);
 
-    if (LED_TASK==TASK_ON) {
-        /*
-        * Flash the onboard LED
-        */
-        //  set to highest priority for use in Idle time
-        xTaskCreatePinnedToCore(LED_task, "LED Task", DEFAULT_STACK, NULL, TASK_PRIO_4, NULL, tskNO_AFFINITY);
-        ESP_LOGI(TAG, "LED task created");
+    xTaskCreatePinnedToCore(cpu_load_task_10k, "CPU load 10k", DEFAULT_STACK, NULL, 4, NULL, Core);
 
-        //
-        //  launch the cpu_load_task for measurement (via LED) of idle time
-        //
-        if (!LED_TASK_TIMED){
-            ESP_LOGI(TAG, "LED configured for idle time... (!LED_TASK_TIMED)");
-            //
-            // low prio task to indicate idle CPU (light off)
-            xTaskCreatePinnedToCore(cpu_load_task, "CPU load Task", DEFAULT_STACK, NULL, TASK_PRIO_2, NULL, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(cpu_load_task_100k, "CPU load 100k", DEFAULT_STACK, NULL, 3, NULL, Core);
 
-            ESP_LOGI(TAG, "cpu idle task created");
-            }
+    // xTaskCreatePinnedToCore(hello_task, "Hello World", DEFAULT_STACK, NULL, 5, NULL, Core);
 
-        }
+    ESP_LOGI(TAG, "\n\n      tasks STARTED...\n\n");
 
-    if (PHOTONIC_TASK==TASK_ON) {
-        //
-        // Generate 100Hz cycle and coordinate OFF time  ON time and
-        //        ADC readings
-        //
-        argptr = NULL;
-        xTaskCreatePinnedToCore(photonic_task, "Photonics Task", DEFAULT_STACK, argptr, TASK_PRIO_3, NULL, tskNO_AFFINITY);
-        ESP_LOGI(TAG, "Photonics task created");
-        }
-
-    if (LCD_TASK==TASK_ON) {
-        //
-        // Display messages on the LCD
-        //
-        uint8_t lcd_address1 = SLAVE_ADDRESS1_LCD;
-        argptr = &lcd_address1;
-        // Create your LCD task...
-        xTaskCreate(lcd_task_3,    "LCD_Task", 4096, argptr, 5, NULL);     // places msgs from messageQueue on HW display
-        xTaskCreate(lcd_task_3a, "LCD_TESTER", 4096, argptr, 5, NULL);  // sends regular messages
-
-        // xTaskCreatePinnedToCore(LCD_task1, "LCD Task", DEFAULT_STACK, argptr, TASK_PRIO_2, NULL, tskNO_AFFINITY);
-        // xTaskCreatePinnedToCore(LCD_task2, "LCD 16x2 Task", DEFAULT_STACK, (void*)lcd_address2, TASK_PRIO_2, NULL, tskNO_AFFINITY);
-        ESP_LOGI(TAG, "LCD task created");
-        }
-
-    if(PHOTONICS_TEST==TASK_ON){
-        while(1){
-                int testval = photonic_test();
-                ESP_LOGI(TAG, "A/D Test value: %d", testval);
-                vTaskDelay(pdMS_TO_TICKS(1000));
-                }
-        }
 }
